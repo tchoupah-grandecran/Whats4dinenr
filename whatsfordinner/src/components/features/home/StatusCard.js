@@ -1,30 +1,18 @@
-import { useApp } from '@/context/AppContext';
+export default function StatusCard({ status }) {
+  const configs = {
+    'no-menu': { title: "C'est vide !", desc: "Planifiez votre premier menu.", icon: "✍️", color: "bg-orange-100" },
+    'menu-ready': { title: "Menu prêt", desc: "Il est temps de faire la liste.", icon: "📝", color: "bg-blue-100" },
+    'cart-active': { title: "Aux courses !", desc: "Articles restants à trouver.", icon: "🛒", color: "bg-green-100" },
+    'cart-done': { title: "Tout est là", desc: "Prêt à cuisiner de bons plats ?", icon: "🍳", color: "bg-purple-100" },
+  };
 
-export default function StatusCard() {
-  const { getHomeState } = useApp();
-  const state = getHomeState();
+  const config = configs[status];
 
   return (
-    <div className="glass-card home-state-card">
-      {state === 'no-menu' && (
-        <div className="home-state">
-          <div className="home-state-orb orb-teal"><span>✨</span></div>
-          <h2 className="home-state-title">Prêt à planifier tes repas ?</h2>
-          <button className="home-cta home-cta--white">🎲 Générer mon menu</button>
-        </div>
-      )}
-      
-      {state === 'cart-active' && (
-        <div className="home-state">
-          {/* Progress Ring logic from original script */}
-          <div className="home-ring-wrap">
-             {/* SVG Ring would go here */}
-          </div>
-          <h2 className="home-state-title">Tu y es presque !</h2>
-          <button className="home-cta home-cta--teal">Continuer les courses</button>
-        </div>
-      )}
-      {/* ... other states: menu-ready, cart-done, week-done ... */}
+    <div className={`p-8 organic-shape ${config.color} shadow-inner flex flex-col items-center text-center transition-all`}>
+      <span className="text-5xl mb-4">{config.icon}</span>
+      <h3 className="text-xl font-serif font-bold">{config.title}</h3>
+      <p className="text-sm opacity-80 mt-2">{config.desc}</p>
     </div>
   );
 }
