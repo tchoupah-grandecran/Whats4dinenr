@@ -1,10 +1,10 @@
 import { useApp } from '@/context/AppContext';
 import Header from './Header';
 import Navbar from './Navbar';
-import HomeView from '@/pages/HomeView';
-import MenuView from '@/pages/MenuView';
-import CartView from '@/pages/CartView';
-import RecipesView from '@/pages/RecipesView';
+import HomeView from '@/pages_view/homeview';
+import MenuView from '@/pages_view/menuview';
+import CartView from '@/pages_view/cartview';
+import RecipesView from '@/pages_view/recipiesview';
 
 export default function AppShell() {
   const { currentPage } = useApp();
@@ -29,8 +29,8 @@ export default function AppShell() {
         {renderPage()}
       </main>
 
-      {/* Footer is hidden on home page, mirroring your original logic */}
-      {currentPage !== 'home' && <Navbar />}
+      {/* On affiche TOUJOURS la Navbar maintenant ! */}
+      <Navbar />
     </div>
   );
 }

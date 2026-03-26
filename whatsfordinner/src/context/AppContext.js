@@ -20,7 +20,13 @@ export function AppProvider({ children }) {
   };
 
   return (
-    <AppContext.Provider value={{ user, menu, cart, getHomeState, setCurrentPage }}>
+    <AppContext.Provider value={{ 
+      user, setUser, 
+      menu, setMenu, 
+      cart, setCart, 
+      currentPage, setCurrentPage, 
+      getHomeState 
+    }}>
       {children}
     </AppContext.Provider>
   );

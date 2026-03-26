@@ -27,3 +27,181 @@ body {
     radial-gradient(ellipse 70% 80% at 80% 90%, rgba(10,35,18,0.8) 0%, transparent 55%),
     var(--forest-deep);
 }
+
+/* =========================================
+   FIX: STRUCTURE DE L'APPLICATION
+   ========================================= */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.page-content {
+  flex: 1;
+  padding-bottom: 90px; /* Laisse de la place pour la Navbar en bas */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* =========================================
+   FIX: LE FOND "JARDIN SECRET" (FEUILLES)
+   ========================================= */
+.botanical-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--forest-deepest, #060e08);
+  /* Si tu avais une URL d'image spécifique pour les feuilles dans ton ancien code, 
+     remplace l'URL ci-dessous par la tienne ! */
+  background-image: 
+    url('https://www.transparenttextures.com/patterns/leaves-pattern.png'),
+    radial-gradient(ellipse at top right, rgba(122, 171, 130, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse at bottom left, rgba(62, 232, 138, 0.1) 0%, transparent 50%);
+  background-blend-mode: overlay;
+  opacity: 0.8;
+}
+
+/* =========================================
+   FIX: LA NAVBAR (BARRE DE NAVIGATION)
+   ========================================= */
+#section-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: var(--glass-bg-card, rgba(18, 42, 26, 0.82));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(122, 171, 130, 0.2);
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom); /* Pour les écrans d'iPhone */
+}
+
+.nav-menu {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+  height: 64px;
+  width: 100%;
+  position: relative;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: all 0.3s ease;
+}
+
+.nav-item.active {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+/* On force les icônes à avoir une taille normale ! */
+.nav-item img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  pointer-events: none; /* Empêche l'image de bloquer le clic sur le bouton */
+}
+
+/* =========================================
+   FIX: LE HEADER (HAUT DE PAGE)
+   ========================================= */
+#section-header {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  z-index: 10;
+}
+
+.greetings-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--sage), var(--mint));
+  color: var(--forest-deepest);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.greeting-text-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.text-hello {
+  font-size: 0.8rem;
+  color: var(--sage);
+}
+
+.text-username {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}/* =========================================
+   LES COMPOSANTS UI (CARTES ET BOUTONS)
+   ========================================= */
+
+.glass-card {
+  background: var(--glass-bg-card, rgba(18, 42, 26, 0.82));
+  border: 1px solid rgba(122, 171, 130, 0.2);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--radius-2xl, 24px);
+  padding: 16px;
+  color: var(--text-primary, #ebf8ee);
+}
+
+.gradient-btn {
+  background: linear-gradient(135deg, var(--sage, #7aab82) 0%, var(--mint, #3ee88a) 100%);
+  color: var(--forest-deepest, #060e08);
+  border: none;
+  border-radius: 16px;
+  padding: 16px 24px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 15px rgba(62, 232, 138, 0.3);
+  width: 100%;
+}
+
+.gradient-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(62, 232, 138, 0.4);
+}
+
+.gradient-btn:active {
+  transform: translateY(0);
+}
+
+/* Espacement pour la liste du menu */
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
