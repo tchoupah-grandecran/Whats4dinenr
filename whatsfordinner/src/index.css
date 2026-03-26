@@ -1,45 +1,146 @@
-@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@100,200,300,400,500,600,700,800,900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800&display=swap');
-
 @import "tailwindcss";
 
 @theme {
-  --font-display: 'Cabinet Grotesk', sans-serif;
-  --font-body: 'Figtree', sans-serif;
+  --font-display: "Outfit", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "Fira Code", monospace;
 
-  --color-forest-deepest: #060e08;
-  --color-forest-deep: #0a1a10;
-  --color-forest-mid: #0f2416;
-  --color-forest-lift: #152d1c;
-  --color-forest-border-mid: #264d31;
-
-  --color-gold: #f0c94a;
-  --color-gold-deep: #c9a12e;
-  --color-sage: #7aab82;
-  --color-mint: #3ee88a;
-
-  --color-text-primary: rgba(235, 248, 238, 0.96);
-  --color-text-secondary: rgba(155, 195, 165, 0.80);
-  --color-text-muted: rgba(100, 145, 110, 0.60);
+  /* Palette de couleurs culinaire */
+  --color-forest-deepest: #060907;
+  --color-forest-mid: #141d18;
+  --color-forest-light: #1e2b24;
+  
+  --color-mint: #a7f3d0;
+  --color-mint-deep: #10b981;
+  
+  --color-sage: #c084fc;
+  --color-sage-deep: #9333ea;
+  
+  --color-gold: #fbbf24;
+  --color-gold-deep: #d97706;
+  
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #e5e7eb;
+  --color-text-muted: #9ca3af;
 }
 
 @layer base {
-  body {
-    @apply bg-forest-deep text-text-primary font-body antialiased min-h-screen relative overflow-x-hidden;
+  html {
+    -webkit-tap-highlight-color: transparent;
+    @apply antialiased scroll-smooth;
+    /* FIX iOS : Hauteur parfaite même avec les barres de navigation natives */
+    height: -webkit-fill-available;
   }
+  
+  body {
+    @apply text-text-primary font-body relative overflow-x-hidden;
+    
+    /* FIX iOS : S'assure que le body prend bien tout l'écran */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
 
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(circle at 50% 0%, var(--color-forest-mid) 0%, var(--color-forest-deepest) 80%);
-    z-index: -10;
-    pointer-events: none;
+    /* ==========================================================
+       GESTION DES SAFE AREAS iOS (Dynamic Island / Encoche)
+       ========================================================== */
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    
+    /* COULEUR DE FOND */
+    background-color: var(--color-forest-deepest);
+    
+    /* FOND ORGANIQUE (Motif culinaire + Grain)
+      1. Motif feuilles/légumes (Opacité à 3.5%)
+      2. Grain SVG (Opacité à 12%)
+    */
+    background-image: 
+      url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.035'%3E%3Cpath d='M10 10l2 4-2 4 2 4m15 0a5 5 0 1 1-10 0 5 5 0 0 1 10 0m10-5l-2-4 2-4-2-4m15 0a5 5 0 1 1-10 0 5 5 0 0 1 10 0m10-5l2 4-2 4 2 4M10 30l4-2 4 2 4-2m0 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10m-5 10l-4 2-4-2-4 2m0 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10m-5 10l4-2 4 2 4-2M10 50l2-4 2 4 2-4m15 0a5 5 0 1 1-10 0 5 5 0 0 1 10 0m10 5l-2 4 2-4 2 4m15 0a5 5 0 1 1-10 0 5 5 0 0 1 10 0m10 5l2-4 2 4 2-4M10 70l4 2 4-2 4 2m0-15a5 5 0 1 1 0 10 5 5 0 0 1 0-10m5-10l-4-2-4 2-4-2m0-15a5 5 0 1 1 0 10 5 5 0 0 1 0-10m5-10l4 2 4-2 4 2'/%3E%3C/g%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='0.12' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    
+    background-repeat: repeat, repeat;
+    background-size: 120px 120px, 150px 150px;
+    background-position: center top, center top;
   }
 }
 
 @layer components {
+  /* GLASSMORPHISM */
   .glass-panel {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl;
+    @apply bg-white/[0.05] backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)];
   }
+  
+  .glass-card {
+    @apply bg-white/[0.05] backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-3xl p-5 transition-all duration-300;
+  }
+
+  /* DESIGN SYSTEM : BOUTONS (Syntaxe stricte Tailwind v4) */
+  .btn-primary {
+    @apply font-display font-black text-sm uppercase tracking-widest py-4 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none select-none text-forest-deepest bg-gradient-to-br from-mint to-mint-deep hover:shadow-[0_0_20px_rgba(167,243,208,0.3)];
+  }
+
+  .btn-secondary {
+    @apply font-display font-black text-sm uppercase tracking-widest py-4 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none select-none text-white bg-white/10 border border-white/15 hover:bg-white/20;
+  }
+
+  .btn-ghost {
+    @apply font-display font-black text-sm uppercase tracking-widest py-2.5 px-4 rounded-2xl transition-all duration-300 flex items-center justify-center gap-3 shadow-md active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none select-none text-text-muted bg-black/40 border border-white/5 hover:bg-white/10 hover:text-white hover:border-white/15;
+  }
+
+  .btn-danger {
+    @apply font-display font-black text-sm uppercase tracking-widest py-4 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none select-none text-red-300 bg-red-500/15 border border-red-500/20 hover:bg-red-500/30 hover:text-red-200;
+  }
+
+  /* LIGNES CADDIE */
+  .cart-row {
+    @apply flex items-center justify-between gap-4 p-4 hover:bg-white/10 transition-colors cursor-pointer;
+  }
+
+  .ingredient-name {
+    @apply text-white font-bold text-[15px] leading-tight truncate flex-1 min-w-0;
+  }
+
+  .badge-qty {
+    @apply font-mono text-[11px] font-bold px-2 py-1 rounded-lg bg-black/60 border border-white/10 text-gold shrink-0 whitespace-nowrap self-center shadow-inner;
+  }
+
+  .badge {
+    @apply font-mono text-[10px] font-bold px-2 py-0.5 rounded-lg bg-black/50 border border-white/10 text-text-muted uppercase tracking-wider;
+  }
+
+  /* SKELETONS */
+  .animate-pulse-slow {
+    animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.animate-slide-in-bottom {
+  animation: slide-in-bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in-bottom {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Scrollbar invisible */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
