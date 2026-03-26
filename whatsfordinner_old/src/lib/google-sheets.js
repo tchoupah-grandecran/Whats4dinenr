@@ -1,19 +1,25 @@
 import { google } from 'googleapis';
 
-const auth = new google.auth.GoogleAuth({
-  credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT),
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
+// On garde l'instance en mémoire (cache) pour ne pas la recréer à chaque fois
+let sheetsInstance = null;
 
-const sheets = google.sheets({ version: 'v4', auth });
-const spreadsheetId = process.env.SPREADSHEET_ID;
+function getSheets() {
+  if (!sheetsInstance) {
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    sheetsInstance = google.sheets({ version: 'v4', auth });
+  }
+  return { sheets: sheetsInstance, spreadsheetId: process.env.SPREADSHEET_ID };
+}
 
 export const sheetsService = {
-  // Trouver un utilisateur par email
   async getUserByEmail(email) {
+    const { sheets, spreadsheetId } = getSheets();
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Users!A:D', // Email, Prénom, Household ID, Date
+      range: 'Users!A:D',
     });
     const rows = res.data.values || [];
     const userRow = rows.find(row => row[0] === email);
@@ -22,11 +28,11 @@ export const sheetsService = {
     return { email: userRow[0], firstName: userRow[1], householdId: userRow[2] };
   },
 
-  // Récupérer les données du foyer (Menu et Panier)
   async getHousehold(householdId) {
+    const { sheets, spreadsheetId } = getSheets();
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Households!A:E', // ID, Nom, Date, Current Menu, Current Cart
+      range: 'Households!A:E',
     });
     const rows = res.data.values || [];
     const row = rows.find(r => r[0] === householdId);
@@ -40,11 +46,11 @@ export const sheetsService = {
     };
   },
 
-  // Récupérer toutes les recettes (Bibliothèque)
   async getRecipes() {
+    const { sheets, spreadsheetId } = getSheets();
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Recipes!A:W', // ID, Nom, Ingrédients (C à AIS)...
+      range: 'Recipes!A:W',
     });
     return res.data.values || [];
   }

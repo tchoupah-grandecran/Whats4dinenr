@@ -1,0 +1,45 @@
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@100,200,300,400,500,600,700,800,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Cabinet Grotesk', sans-serif;
+  --font-body: 'Figtree', sans-serif;
+
+  --color-forest-deepest: #060e08;
+  --color-forest-deep: #0a1a10;
+  --color-forest-mid: #0f2416;
+  --color-forest-lift: #152d1c;
+  --color-forest-border-mid: #264d31;
+
+  --color-gold: #f0c94a;
+  --color-gold-deep: #c9a12e;
+  --color-sage: #7aab82;
+  --color-mint: #3ee88a;
+
+  --color-text-primary: rgba(235, 248, 238, 0.96);
+  --color-text-secondary: rgba(155, 195, 165, 0.80);
+  --color-text-muted: rgba(100, 145, 110, 0.60);
+}
+
+@layer base {
+  body {
+    @apply bg-forest-deep text-text-primary font-body antialiased min-h-screen relative overflow-x-hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at 50% 0%, var(--color-forest-mid) 0%, var(--color-forest-deepest) 80%);
+    z-index: -10;
+    pointer-events: none;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
+}
