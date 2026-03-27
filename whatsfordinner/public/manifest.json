@@ -1,12 +1,10 @@
 {
   "name": "What's for Dinner",
   "short_name": "Dinner",
-  "description": "Gérez vos menus et courses de la semaine",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#060907",
-  "theme_color": "#10b981",
-  "orientation": "portrait",
+  "background_color": "#a7f3d0",
+  "theme_color": "#060907",
   "icons": [
     {
       "src": "/logo-192.png",
