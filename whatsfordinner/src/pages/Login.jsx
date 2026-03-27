@@ -20,13 +20,17 @@ export default function Login() {
       const userSnap = await getDoc(userRef);
 
       if (!userSnap.exists()) {
-        await setDoc(userRef, {
-          email: user.email,
-          name: user.displayName,
-          householdId: null,
-          createdAt: new Date().toISOString()
-        });
-      }
+  // On récupère le prénom (le premier mot du displayName)
+  const firstName = user.displayName ? user.displayName.split(' ')[0] : "Chef";
+  
+  await setDoc(userRef, {
+    email: user.email,
+    name: user.displayName,
+    firstName: firstName, // <-- ON AJOUTE LE PRÉNOM ICI
+    householdId: null,
+    createdAt: new Date().toISOString()
+  });
+}
       
       /* 3. LE CORRECTIF EST ICI : On force le passage à la page d'accueil ! */
       navigate("/");
