@@ -12,43 +12,36 @@ export default function BottomNav() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none pb-[env(safe-area-inset-bottom)]">
-      
-      {/* 2. Le conteneur centré avec un padding normal pour décoller la barre du bord */}
-      <div className="max-w-md mx-auto pointer-events-auto px-4 pb-4 pt-2">
-        
-        {/* 3. La barre de navigation avec le style Glassmorphism */}
-        <nav className="glass-panel rounded-3xl flex justify-around items-center p-2">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            const Icon = item.icon;
-            
-            return (
-              <Link 
-                key={item.path} 
-                to={item.path}
-                className={`flex flex-col items-center justify-center w-16 h-14 rounded-2xl transition-all duration-300 ${
-                  isActive 
-                    ? 'text-mint bg-white/10 shadow-inner' 
-                    : 'text-text-muted hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Icon 
-                  size={22} 
-                  strokeWidth={isActive ? 2.5 : 2} 
-                  className={`transition-transform duration-300 ${isActive ? '-translate-y-0.5' : ''}`} 
-                />
-                <span className={`text-[10px] font-display tracking-wide font-bold transition-opacity duration-300 ${
-                  isActive ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'
-                }`}>
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-      
+    <div className="fixed bottom-0 left-0 w-full z-50 bg-[#060907]/75 backdrop-blur-2xl border-t border-white/10 pb-[env(safe-area-inset-bottom)] pointer-events-auto">
+      <nav className="flex justify-around items-center h-[55px] px-2 max-w-md mx-auto">
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          const Icon = item.icon;
+          
+          return (
+            <Link 
+              key={item.path} 
+              to={item.path}
+              className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-300 ${
+                isActive 
+                  ? 'text-mint' 
+                  : 'text-text-muted hover:text-white/80'
+              }`}
+            >
+              <Icon 
+                size={24} 
+                strokeWidth={isActive ? 2.5 : 2} 
+                className={`transition-all duration-300 ${isActive ? '-translate-y-0.5 scale-110' : 'translate-y-2 scale-100'}`} 
+              />
+              <span className={`text-[10px] font-body font-bold tracking-wide transition-all duration-300 ${
+                isActive ? 'opacity-100 h-auto mt-1' : 'opacity-0 h-0 overflow-hidden m-0'
+              }`}>
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }
