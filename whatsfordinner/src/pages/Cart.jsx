@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { auth, db } from "../lib/firebase";
 import { doc, getDoc, updateDoc, onSnapshot, collection, getDocs } from "firebase/firestore";
 import { ShoppingBag, Plus, Circle, CheckCircle2, Trash2, List, ChefHat, Store, ChevronDown, ChevronUp } from "lucide-react";
@@ -13,7 +13,10 @@ export default function Cart() {
   const [viewMode, setViewMode] = useState("list");
   const [newItem, setNewItem] = useState("");
   const [showCompleted, setShowCompleted] = useState(false);
-  const [animatingItems, setAnimatingItems] = useState([]); // Nouveau : pour suivre les items en cours d'animation
+
+  // États pour l'animation de sortie
+  const [animatingItems, setAnimatingItems] = useState([]); // Items rayés (immédiat)
+  const [exitingItems, setExitingItems] = useState([]); // Items en train de glisser/disparaître
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -28,7 +31,7 @@ export default function Cart() {
           if (data.name) map[data.name.toLowerCase()] = data.rayon || "Autres";
         });
         setIngredientsMap(map);
-      } catch (error) { console.error(error); }
+      } catch (error) { console.error("Erreur dictionnaire:", error); }
 
       const userSnap = await getDoc(doc(db, "users", user.uid));
       if (userSnap.exists() && userSnap.data().householdId) {
@@ -58,72 +61,77 @@ export default function Cart() {
     return `${val} ${unit}`.trim();
   };
 
-  // NOUVELLE LOGIQUE DE TOGGLE AVEC ANIMATION
   const toggleItemWithAnimation = async (id) => {
     const item = cart.find(i => i.id === id);
-    const isChecking = !item.checked;
+    if (!item) return;
 
-    if (isChecking) {
-      // 1. Marquer l'item comme "en cours d'animation"
+    if (!item.checked) {
+      // 1. PHASE IMMÉDIATE : Griser et rayer
       setAnimatingItems(prev => [...prev, id]);
 
-      // 2. Lancer la mise à jour Firebase après un délai de 3.5 secondes (3s d'attente + 0.5s d'animation)
+      // 2. PHASE DISPARITION (après 2 secondes de battement)
+      setTimeout(() => {
+        setExitingItems(prev => [...prev, id]);
+      }, 2000);
+
+      // 3. PHASE FIREBASE (après l'animation de glisse)
       setTimeout(async () => {
         const updated = cart.map(i => i.id === id ? { ...i, checked: true } : i);
         await updateDoc(householdRef, { currentCart: updated });
-        // Retirer de la liste d'animation après la mise à jour
+        
+        // Nettoyage
         setAnimatingItems(prev => prev.filter(itemId => itemId !== id));
-      }, 3500);
+        setExitingItems(prev => prev.filter(itemId => itemId !== id));
+      }, 2600);
     } else {
-      // Si on décoche depuis le panier, pas d'animation de disparition, on met à jour directement
+      // Décocher depuis le panier : instantané
       const updated = cart.map(i => i.id === id ? { ...i, checked: false } : i);
       await updateDoc(householdRef, { currentCart: updated });
     }
   };
 
-  // LOGIQUE DE FILTRAGE (On n'affiche pas les items en cours d'animation)
-  const pendingItems = cart.filter(i => !i.checked && !animatingItems.includes(i.id));
-  const completedItems = cart.filter(i => i.checked);
+  // Performance : on recalcule les rayons uniquement si le panier change
+  const pendingItems = useMemo(() => cart.filter(i => !i.checked), [cart]);
+  const completedItems = useMemo(() => cart.filter(i => i.checked), [cart]);
 
-  // Groupement des articles EN ATTENTE par rayon
-  const groupedPending = pendingItems.reduce((acc, item) => {
-    let rayon = item.type === 'manual' ? "Extras" : (ingredientsMap[item.baseName] || "Autres");
-    if (!acc[rayon]) acc[rayon] = [];
-    acc[rayon].push(item);
-    return acc;
-  }, {});
-
-  const sortedRayons = Object.keys(groupedPending).sort((a, b) => {
-    if (a === "Extras") return 1;
-    if (b === "Extras") return -1;
-    return a.localeCompare(b);
-  });
+  const sortedRayons = useMemo(() => {
+    const grouped = pendingItems.reduce((acc, item) => {
+      let rayon = item.type === 'manual' ? "Extras" : (ingredientsMap[item.baseName] || "Autres");
+      if (!acc[rayon]) acc[rayon] = [];
+      acc[rayon].push(item);
+      return acc;
+    }, {});
+    return Object.keys(grouped).sort((a, b) => a === "Extras" ? 1 : b === "Extras" ? -1 : a.localeCompare(b));
+  }, [pendingItems, ingredientsMap]);
 
   if (loading) return <div className="p-6"><SkeletonLoader type="header" /><SkeletonLoader type="cart-item" /></div>;
 
   return (
     <>
-      {/* INJECTION DES KEYFRAMES CSS POUR L'ANIMATION */}
       <style>{`
-        @keyframes itemSlideOut {
-          0% { transform: translateX(0); opacity: 1; max-height: 80px; padding: 1rem; margin-top: 0; }
-          10% { transform: translateX(0); opacity: 0.4; } /* Rayer/Griser */
-          90% { transform: translateX(30px); opacity: 0; max-height: 80px; padding: 1rem; margin-top: 0; } /* Glisser */
-          100% { transform: translateX(30px); opacity: 0; max-height: 0; padding: 0; margin-top: -1px; } /* Resize */
+        .item-row-base {
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          max-height: 100px;
+          opacity: 1;
         }
-        .animate-item-exit {
-          animation: itemSlideOut 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          animation-delay: 3s; /* L'attente de 3 secondes */
-          pointer-events: none; /* Désactiver les clics pendant l'animation */
-          overflow: hidden; /* Crucial pour le resize */
-        }
-        /* Style immédiat dès le clic pour barrer et griser */
-        .is-animating {
+        /* État : vient d'être coché */
+        .is-animating-checked {
           opacity: 0.4 !important;
-          transition: opacity 0.2s ease;
         }
-        .is-animating .ingredient-name {
-          text-decoration: line-through;
+        .is-animating-checked .ingredient-name {
+          text-decoration: line-through !important;
+        }
+        /* État : en train de sortir de la liste */
+        .is-exiting {
+          transform: translateX(40px);
+          opacity: 0;
+          max-height: 0;
+          padding-top: 0;
+          padding-bottom: 0;
+          margin: 0;
+          border: none;
+          pointer-events: none;
+          overflow: hidden;
         }
       `}</style>
 
@@ -155,70 +163,61 @@ export default function Cart() {
           <button type="submit" className="absolute right-2 top-2 bottom-2 btn-primary p-0 aspect-square rounded-xl"><Plus size={24} /></button>
         </form>
 
-        {/* CONTENU PRINCIPAL */}
-        <div className="flex flex-col gap-8 transition-all duration-500">
-          
-          {/* ARTICLES À ACHETER (Avec animation) */}
+        <div className="flex flex-col gap-8">
           {viewMode === "list" ? (
-            sortedRayons.length > 0 ? (
-              sortedRayons.map((rayon) => (
-                <div key={rayon} className="flex flex-col gap-3">
-                  <h3 className="font-display font-black text-forest-deepest/40 uppercase tracking-widest text-[11px] flex items-center gap-2 px-2 transition-opacity duration-300">
-                    <Store size={14} /> {rayon}
-                  </h3>
-                  <div className="glass-panel rounded-3xl overflow-hidden divide-y divide-forest-deepest/5 shadow-sm border-none transition-all duration-300">
-                    {/* On inclut temporairement les items en cours d'animation dans le rendu de la liste principale */}
-                    {[...groupedPending[rayon], ...cart.filter(i => animatingItems.includes(i.id) && (i.type === 'manual' ? "Extras" : (ingredientsMap[i.baseName] || "Autres")) === rayon)].map(item => {
-                      const isAnimating = animatingItems.includes(item.id);
-                      return (
-                        <div 
-                          key={item.id} 
-                          onClick={() => toggleItemWithAnimation(item.id)} 
-                          // Application des classes d'animation
-                          className={`cart-row bg-transparent ${isAnimating ? 'animate-item-exit is-animating' : ''}`}
-                        >
-                          <div className="flex items-center gap-4 min-w-0 flex-1">
-                            {isAnimating 
-                              ? <CheckCircle2 className="text-mint-deep shrink-0" size={24} />
-                              : <Circle className="text-forest-deepest/20 shrink-0" size={24} />
-                            }
-                            <span className="ingredient-name text-forest-deepest transition-all duration-200">
-                              {item.name.split(' (')[0]}
-                            </span>
-                          </div>
-                          {item.name.includes('(') && <span className="badge-qty transition-opacity duration-200">{formatQuantity(item.name.split(' (')[1].replace(')', ''))}</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
+            sortedRayons.map((rayon) => (
+              <div key={rayon} className="flex flex-col gap-3">
+                <h3 className="font-display font-black text-forest-deepest/40 uppercase tracking-widest text-[11px] flex items-center gap-2 px-2 transition-opacity">
+                  <Store size={14} /> {rayon}
+                </h3>
+                <div className="glass-panel rounded-3xl overflow-hidden divide-y divide-forest-deepest/5 border-none shadow-sm">
+                  {pendingItems.filter(i => (i.type === 'manual' ? "Extras" : (ingredientsMap[i.baseName] || "Autres")) === rayon).map(item => (
+                    <div 
+                      key={item.id} 
+                      onClick={() => toggleItemWithAnimation(item.id)} 
+                      className={`cart-row item-row-base ${animatingItems.includes(item.id) ? 'is-animating-checked' : ''} ${exitingItems.includes(item.id) ? 'is-exiting' : ''}`}
+                    >
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        {animatingItems.includes(item.id)
+                          ? <CheckCircle2 className="text-mint-deep shrink-0 animate-fade-in" size={24} />
+                          : <Circle className="text-forest-deepest/20 shrink-0" size={24} />
+                        }
+                        <span className="ingredient-name text-forest-deepest transition-all">
+                          {item.name.split(' (')[0]}
+                        </span>
+                      </div>
+                      {item.name.includes('(') && <span className="badge-qty">{formatQuantity(item.name.split(' (')[1].replace(')', ''))}</span>}
+                    </div>
+                  ))}
                 </div>
-              ))
-            ) : completedItems.length === 0 && (
-              <p className="text-center text-forest-deepest/30 text-sm mt-10">Liste vide !</p>
-            )
+              </div>
+            ))
           ) : (
-            /* VUE RECETTE (Items non cochés uniquement, l'animation de disparition est gérée par le filtrage) */
+            /* VUE RECETTE */
             menu.map(recipe => {
               const recipePending = recipe.ingredients?.filter(ing => pendingItems.some(p => p.baseName === ing.name.toLowerCase()));
               if (!recipePending || recipePending.length === 0) return null;
               return (
-                <div key={recipe.id} className="glass-card shadow-sm border-none transition-all duration-300">
+                <div key={recipe.id} className="glass-card shadow-sm border-none">
                   <h3 className="text-forest-deepest font-bold text-lg mb-4">{recipe.name}</h3>
-                  {recipePending.map((ing, i) => (
-                    <div key={i} onClick={() => toggleItemWithAnimation(cart.find(c => c.baseName === ing.name.toLowerCase())?.id)} className="flex justify-between items-center p-2 -mx-2 rounded-xl hover:bg-forest-deepest/5 cursor-pointer">
-                      <div className="flex items-center gap-3">
-                        <Circle className="text-forest-deepest/20 shrink-0" size={18}/>
-                        <span className="text-forest-deepest text-sm font-medium">{ing.name}</span>
+                  {recipePending.map((ing, i) => {
+                    const cItem = cart.find(c => c.baseName === ing.name.toLowerCase());
+                    return (
+                      <div key={i} onClick={() => toggleItemWithAnimation(cItem?.id)} className={`flex justify-between items-center p-2 -mx-2 rounded-xl hover:bg-forest-deepest/5 cursor-pointer ${animatingItems.includes(cItem?.id) ? 'opacity-30 line-through' : ''}`}>
+                        <div className="flex items-center gap-3">
+                          {animatingItems.includes(cItem?.id) ? <CheckCircle2 className="text-mint-deep" size={18}/> : <Circle className="text-forest-deepest/20" size={18}/>}
+                          <span className="text-forest-deepest text-sm font-medium">{ing.name}</span>
+                        </div>
+                        <span className="badge-qty bg-transparent shadow-none opacity-60">{formatQuantity(ing.quantity)}</span>
                       </div>
-                      <span className="badge-qty bg-transparent shadow-none opacity-60">{formatQuantity(ing.quantity)}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })
           )}
 
-          {/* SECTION PANIER (Articles cochés) */}
+          {/* PANIER (DÉJÀ COCHÉS) */}
           {completedItems.length > 0 && (
             <div className="mt-4 border-t border-forest-deepest/10 pt-6 animate-fade-in">
               <button 
