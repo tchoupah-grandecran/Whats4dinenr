@@ -137,7 +137,7 @@ export default function Home() {
 
       {/* MODALE DE PROFIL RESTAURÉE */}
       {isProfileOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm glass-panel rounded-3xl p-6 shadow-2xl relative animate-slide-in-bottom max-h-[90vh] overflow-y-auto scrollbar-hide">
             <button onClick={closeModal} className="absolute top-4 right-4 text-white/40 hover:text-white"><X size={24} /></button>
             
