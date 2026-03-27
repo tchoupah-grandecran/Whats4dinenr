@@ -37,29 +37,59 @@ export default function Recipes() {
 
   return (
     <div className="flex flex-col min-h-screen py-6 px-4 pb-32 animate-fade-in">
+      {/* HEADER */}
       <header className="mb-6 flex justify-between items-center">
-        <h1 className="text-2xl font-black text-white font-display tracking-tight">Recettes</h1>
-        <Link to="/import" className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-text-muted hover:text-white transition-colors border border-white/10"><DatabaseBackup size={18} /></Link>
+        <h1 className="text-2xl font-black text-forest-deepest font-display tracking-tight">Recettes</h1>
+        <Link 
+          to="/import" 
+          className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-forest-deepest/60 hover:text-forest-deepest hover:bg-forest-deepest/5 transition-colors border-none shadow-sm"
+        >
+          <DatabaseBackup size={18} />
+        </Link>
       </header>
 
+      {/* BARRE DE RECHERCHE */}
       <div className="relative mb-6">
-        <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Rechercher une recette..." className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-5 text-white focus:border-mint/50 outline-none font-body transition-all" />
-        <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-white/30" />
+        <input 
+          type="text" 
+          value={searchTerm} 
+          onChange={e => setSearchTerm(e.target.value)} 
+          placeholder="Rechercher une recette..." 
+          className="w-full bg-forest-deepest/5 border border-forest-deepest/10 rounded-2xl py-4 px-5 text-forest-deepest placeholder-forest-deepest/40 focus:bg-white focus:border-forest-deepest/20 outline-none font-body transition-all shadow-inner" 
+        />
+        <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-forest-deepest/30" size={20} />
       </div>
 
+      {/* FILTRES PAR PROTÉINE */}
       <div className="flex gap-2 overflow-x-auto pb-4 mb-4 scrollbar-hide -mx-1 px-1">
         {proteins.map(p => (
-          <button key={p.id} onClick={() => setActiveProtein(p.id)} className={`${p.id === activeProtein ? "btn-primary" : "btn-ghost"} py-2 px-4 text-xs whitespace-nowrap`}>{p.label}</button>
+          <button 
+            key={p.id} 
+            onClick={() => setActiveProtein(p.id)} 
+            className={`py-2 px-4 text-sm font-bold rounded-full whitespace-nowrap transition-all duration-300 ${
+              p.id === activeProtein 
+                ? "bg-forest-deepest text-cream shadow-md" 
+                : "bg-forest-deepest/5 text-forest-deepest/60 hover:bg-forest-deepest/10 hover:text-forest-deepest"
+            }`}
+          >
+            {p.label}
+          </button>
         ))}
       </div>
 
+      {/* LISTE DES RECETTES */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filtered.map(recipe => (
-          <div key={recipe.id} className="glass-card group hover:border-mint/30 transition-all hover:scale-[1.01] cursor-pointer">
-            <h2 className="text-lg font-bold text-white mb-4 leading-tight group-hover:text-mint transition-colors">{recipe.name}</h2>
-            <div className="flex justify-between items-center border-t border-white/5 pt-4 mt-auto">
-              <span className="badge text-gold text-[10px] tracking-widest">{recipe.protein}</span>
-              <span className="text-text-muted text-[10px] font-mono flex items-center gap-1 uppercase"><Clock3 size={12} /> {recipe.time}</span>
+          <div key={recipe.id} className="glass-card group hover:border-forest-deepest/20 transition-all hover:scale-[1.01] cursor-pointer">
+            <h2 className="text-lg font-bold text-forest-deepest mb-4 leading-tight group-hover:text-mint-deep transition-colors">
+              {recipe.name}
+            </h2>
+            <div className="flex justify-between items-center border-t border-forest-deepest/5 pt-4 mt-auto">
+              {/* Le tag protéine utilise le badge standard */}
+              <span className="badge">{recipe.protein}</span>
+              <span className="text-forest-deepest/50 text-[10px] font-mono flex items-center gap-1 uppercase font-bold">
+                <Clock3 size={12} /> {recipe.time}
+              </span>
             </div>
           </div>
         ))}

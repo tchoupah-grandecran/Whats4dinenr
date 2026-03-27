@@ -7,11 +7,14 @@
 
   /* Palette de couleurs culinaire */
   --color-forest-deepest: #060907;
-  --color-forest-mid: #141d18;
-  --color-forest-light: #1e2b24;
+  --color-forest-mid: #1e3526;
+  --color-forest-light: #2c4a36;
   
   --color-mint: #a7f3d0;
   --color-mint-deep: #10b981;
+  
+  /* NOUVEAU : Le Beige/Crème très léger pour les cartes */
+  --color-cream: #faf9f5;
   
   --color-sage: #c084fc;
   --color-sage-deep: #9333ea;
@@ -19,9 +22,9 @@
   --color-gold: #fbbf24;
   --color-gold-deep: #d97706;
   
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #e5e7eb;
-  --color-text-muted: #9ca3af;
+  --color-text-primary: #060907; /* Le texte principal devient vert très foncé */
+  --color-text-secondary: #1e3526;
+  --color-text-muted: #2c4a36;
 }
 
 @layer base {
@@ -29,129 +32,124 @@
     -webkit-tap-highlight-color: transparent;
     @apply antialiased scroll-smooth;
     height: -webkit-fill-available;
-    
-    /* 1. ANTI-ZOOM : Désactive le zoom au double-tap rapide */
     touch-action: manipulation;
-    /* 2. Empêche iOS de grossir le texte tout seul */
     -webkit-text-size-adjust: 100%;
   }
   
-  /* 3. LE SECRET ANTI-ZOOM iOS : 
-     Si la police d'un input fait moins de 16px, l'iPhone zoomera 
-     automatiquement dessus quand on tape. On force donc 16px min. */
   input[type="text"], input[type="search"], textarea, select {
     font-size: 16px !important;
   }
   
-  
   body {
-    @apply text-text-primary font-body relative overflow-x-hidden;
-    
+    @apply font-body relative overflow-x-hidden;
     min-height: 100vh;
     min-height: -webkit-fill-available;
-
     padding-top: env(safe-area-inset-top);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
     
-    background-color: var(--color-forest-deepest);
+    /* LE FOND GLOBAL MINT */
+    background-color: var(--color-mint);
     
-    /* ==========================================================
-       NOUVEAU FOND (Aléatoire + Tailles multiples)
-       La première URL est au DESSUS (Légumes).
-       La seconde URL est en DESSOUS (Grain).
-       ========================================================== */
+    /* MOTIF ORGANIQUE DISCRET (Légumes Vert Foncé) */
     background-image: 
-      /* 1. AU DESSUS : La tuile géante avec les légumes éparpillés, tournés et redimensionnés */
-      url("data:image/svg+xml,%3Csvg width='400' height='400' viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cg id='c'%3E%3Cpath d='M0-10l5 10c1 2 2 4 2 6 0 5-4 10-8 10-2 0-3-1-3-3s1-3 3-3c2 0 4-1 4-3s-1-3-3-5l-1-1 1-1zm0 0l-5-10m0 0l5 10'/%3E%3Ccircle cx='-5' cy='-15' r='2'/%3E%3C/g%3E%3Cg id='t'%3E%3Ccircle cx='0' cy='0' r='10'/%3E%3Cpath d='M-3-10c1 0 1 1 0 2s-1-1 0-2zm4 0c1 0 1 1 0 2s-1-1 0-2z'/%3E%3C/g%3E%3Cg id='b'%3E%3Cpath d='M0 0v10m-3-10l3 10m3-10l-3 10'/%3E%3Cpath d='M-3-5a5 5 0 0 1 6 0l2 2a5 5 0 0 1 0 6l-2 2a5 5 0 0 1-6 0l-2-2a5 5 0 0 1 0-6l2-2z'/%3E%3C/g%3E%3Cg id='s'%3E%3Cpath d='M0 0c0 5 5 10 10 10h10v-10c0-5-5-10-10-10h-10z'/%3E%3Cpath d='M10 0l5 5m5-5l-5-5m0 0l5-5m-5 5l-5-5'/%3E%3C/g%3E%3C/defs%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Cuse href='%23c' transform='translate(50, 60) scale(1.2) rotate(15)'/%3E%3Cuse href='%23t' transform='translate(180, 40) scale(0.8) rotate(-20)'/%3E%3Cuse href='%23b' transform='translate(330, 70) scale(1.5) rotate(45)'/%3E%3Cuse href='%23s' transform='translate(90, 190) scale(0.9) rotate(-60)'/%3E%3Cuse href='%23c' transform='translate(260, 160) scale(0.7) rotate(-140)'/%3E%3Cuse href='%23t' transform='translate(360, 220) scale(1.4) rotate(80)'/%3E%3Cuse href='%23b' transform='translate(40, 310) scale(1.1) rotate(-10)'/%3E%3Cuse href='%23s' transform='translate(180, 340) scale(1.3) rotate(110)'/%3E%3Cuse href='%23t' transform='translate(310, 330) scale(0.9) rotate(25)'/%3E%3Cuse href='%23c' transform='translate(150, 280) scale(1.5) rotate(40)'/%3E%3Cuse href='%23b' transform='translate(250, 360) scale(0.8) rotate(170)'/%3E%3Cuse href='%23s' transform='translate(380, 130) scale(1.1) rotate(-80)'/%3E%3C/g%3E%3C/svg%3E"),
-      
-      /* 2. EN DESSOUS : Texture de grain ultra discrète (Opacité 3%) */
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='0.03' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      url("data:image/svg+xml,%3Csvg width='400' height='400' viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cg id='c'%3E%3Cpath d='M0-10l5 10c1 2 2 4 2 6 0 5-4 10-8 10-2 0-3-1-3-3s1-3 3-3c2 0 4-1 4-3s-1-3-3-5l-1-1 1-1zm0 0l-5-10m0 0l5 10'/%3E%3Ccircle cx='-5' cy='-15' r='2'/%3E%3C/g%3E%3Cg id='t'%3E%3Ccircle cx='0' cy='0' r='10'/%3E%3Cpath d='M-3-10c1 0 1 1 0 2s-1-1 0-2zm4 0c1 0 1 1 0 2s-1-1 0-2z'/%3E%3C/g%3E%3Cg id='b'%3E%3Cpath d='M0 0v10m-3-10l3 10m3-10l-3 10'/%3E%3Cpath d='M-3-5a5 5 0 0 1 6 0l2 2a5 5 0 0 1 0 6l-2 2a5 5 0 0 1-6 0l-2-2a5 5 0 0 1 0-6l2-2z'/%3E%3C/g%3E%3Cg id='s'%3E%3Cpath d='M0 0c0 5 5 10 10 10h10v-10c0-5-5-10-10-10h-10z'/%3E%3Cpath d='M10 0l5 5m5-5l-5-5m0 0l5-5m-5 5l-5-5'/%3E%3C/g%3E%3C/defs%3E%3Cg fill='%23060907' fill-opacity='0.06'%3E%3Cuse href='%23c' transform='translate(50, 60) scale(1.2) rotate(15)'/%3E%3Cuse href='%23t' transform='translate(180, 40) scale(0.8) rotate(-20)'/%3E%3Cuse href='%23b' transform='translate(330, 70) scale(1.5) rotate(45)'/%3E%3Cuse href='%23s' transform='translate(90, 190) scale(0.9) rotate(-60)'/%3E%3Cuse href='%23c' transform='translate(260, 160) scale(0.7) rotate(-140)'/%3E%3Cuse href='%23t' transform='translate(360, 220) scale(1.4) rotate(80)'/%3E%3Cuse href='%23b' transform='translate(40, 310) scale(1.1) rotate(-10)'/%3E%3Cuse href='%23s' transform='translate(180, 340) scale(1.3) rotate(110)'/%3E%3Cuse href='%23t' transform='translate(310, 330) scale(0.9) rotate(25)'/%3E%3Cuse href='%23c' transform='translate(150, 280) scale(1.5) rotate(40)'/%3E%3Cuse href='%23b' transform='translate(250, 360) scale(0.8) rotate(170)'/%3E%3Cuse href='%23s' transform='translate(380, 130) scale(1.1) rotate(-80)'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 400px 400px;
+    background-position: center top;
     
-    /* La tuile géante fait 400x400 pour empêcher l'oeil de voir la grille */
-    background-repeat: repeat, repeat;
-    background-size: 400px 400px, 150px 150px;
-    background-position: center top, center top;
+    color: var(--color-forest-deepest);
   }
 }
 
 @layer components {
-  /* GLASSMORPHISM */
+  /* ==========================================================
+     LES CARTES : Beige/Crème très léger (Style "Papier")
+     ========================================================== */
   .glass-panel {
-    @apply bg-white/[0.05] backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)];
+    @apply backdrop-blur-xl border border-forest-deepest/5 shadow-[0_12px_40px_rgba(6,9,7,0.06)];
+    background-color: rgba(250, 249, 245, 0.85); /* La couleur Crème semi-transparente */
   }
   
   .glass-card {
-    @apply bg-white/[0.05] backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-3xl p-5 transition-all duration-300;
+    @apply backdrop-blur-xl border border-forest-deepest/5 shadow-[0_12px_40px_rgba(6,9,7,0.06)] rounded-3xl p-5 transition-all duration-300;
+    background-color: rgba(250, 249, 245, 0.85); /* La couleur Crème semi-transparente */
   }
 
-  /* BOUTONS */
+  /* ==========================================================
+     BOUTONS : Vert Forêt Profond avec texte Crème
+     ========================================================= */
   .btn-primary {
-    @apply font-display font-black text-sm uppercase tracking-widest py-4 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none select-none text-forest-deepest bg-gradient-to-br from-mint to-mint-deep hover:shadow-[0_0_20px_rgba(167,243,208,0.3)];
+    @apply flex items-center justify-center gap-3 bg-forest-deepest text-cream hover:bg-forest-mid hover:shadow-[0_8px_20px_rgba(6,9,7,0.2)] shadow-md active:scale-[0.98] disabled:opacity-50 rounded-full py-4 px-6 text-sm font-display font-bold uppercase tracking-wider transition-all duration-300;
   }
 
   .btn-secondary {
-    @apply font-display font-black text-sm uppercase tracking-widest py-4 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none select-none text-white bg-white/10 border border-white/15 hover:bg-white/20;
+    @apply flex items-center justify-center gap-3 bg-mint text-forest-deepest shadow-sm hover:shadow-md active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none rounded-full py-4 px-6 text-sm font-display font-bold uppercase tracking-wider border border-forest-deepest/5 transition-all duration-300;
   }
 
   .btn-ghost {
-    @apply font-display font-black text-sm uppercase tracking-widest py-2.5 px-4 rounded-2xl transition-all duration-300 flex items-center justify-center gap-3 shadow-md active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none select-none text-text-muted bg-black/40 border border-white/5 hover:bg-white/10 hover:text-white hover:border-white/15;
+    @apply flex items-center justify-center gap-3 active:scale-[0.97] disabled:opacity-40 rounded-full py-2.5 px-4 text-sm font-display font-bold uppercase tracking-wider transition-all duration-300 text-forest-deepest bg-forest-deepest/5 border border-transparent hover:bg-forest-deepest/10;
   }
 
   .btn-danger {
-    @apply font-display font-black text-sm uppercase tracking-widest py-4 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none select-none text-red-300 bg-red-500/15 border border-red-500/20 hover:bg-red-500/30 hover:text-red-200;
+    @apply flex items-center justify-center gap-3 bg-red-50 text-red-500 border border-red-100 hover:bg-red-100 shadow-sm active:scale-[0.97] disabled:opacity-40 rounded-full py-4 px-6 text-sm font-display font-bold uppercase tracking-wider transition-all duration-300;
   }
 
-  /* CADDIE */
+  /* ==========================================================
+     CADDIE (Lignes d'ingrédients)
+     ========================================================== */
   .cart-row {
-    @apply flex items-center justify-between gap-4 p-4 hover:bg-white/10 transition-colors cursor-pointer;
+    @apply flex items-center justify-between gap-4 p-4 hover:bg-forest-deepest/5 transition-colors cursor-pointer rounded-2xl;
   }
 
   .ingredient-name {
-    @apply text-white font-bold text-[15px] leading-tight truncate flex-1 min-w-0;
+    /* Le texte hérite naturellement de la couleur foncée, on s'assure juste de sa taille */
+    @apply font-bold text-[15px] leading-tight truncate flex-1 min-w-0;
   }
 
+  /* Gélule de quantité (Fond vert léger, texte Vert Forêt) */
   .badge-qty {
-    @apply font-mono text-[11px] font-bold px-2 py-1 rounded-lg bg-black/60 border border-white/10 text-gold shrink-0 whitespace-nowrap self-center shadow-inner;
+    @apply font-mono text-[11px] font-bold px-2 py-1 rounded-full bg-forest-deepest/10 text-forest-deepest shrink-0 whitespace-nowrap self-center shadow-none;
   }
 
   .badge {
-    @apply font-mono text-[10px] font-bold px-2 py-0.5 rounded-lg bg-black/50 border border-white/10 text-text-muted uppercase tracking-wider;
+    @apply font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-forest-deepest/5 text-forest-deepest/60 uppercase tracking-wider;
   }
 
-  /* SKELETONS */
-  .animate-pulse-slow {
-    animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  /* ==========================================================
+     NETTOYAGE CSS (Force les anciennes classes blanches en sombres)
+     ========================================================== */
+  
+  /* Tout ce qui était codé en dur en "blanc" dans React devient Vert Forêt */
+  .text-white, .text-mint, .text-mint\/80 { color: var(--color-forest-deepest) !important; }
+  .text-white\/20, .text-text-muted { color: var(--color-forest-deepest) !important; opacity: 0.5 !important; }
+  
+  /* Les bordures blanches deviennent des bordures sombres très légères */
+  .border-white\/5, .border-white\/10, .border-white\/15 { border-color: rgba(6, 9, 7, 0.08) !important; }
+  .divide-white\/5 > :not([hidden]) ~ :not([hidden]) { border-color: rgba(6, 9, 7, 0.08) !important; }
+  
+  /* Les fonds noirs/blancs codés en dur dans React (ex: Login, Inputs) deviennent Crème ou translucides */
+  .bg-black\/40, .bg-\[\#060907\] { background-color: rgba(250, 249, 245, 0.85) !important; }
+  .bg-white\/5, .bg-white\/10 { background-color: rgba(6, 9, 7, 0.04) !important; }
+
+  /* Le bouton Google de la page Login qui avait son propre code sombre */
+  .bg-\[\#0a0f0c\] {
+    background-color: var(--color-forest-deepest) !important;
+    color: var(--color-cream) !important;
   }
+
+  /* ==========================================================
+     ANIMATIONS & SKELETONS
+     ========================================================== */
+  .animate-pulse-slow { animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 }
 
-@keyframes pulse-slow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
+@keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
+.animate-slide-in-bottom { animation: slide-in-bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slide-in-bottom { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-.animate-fade-in {
-  animation: fade-in 0.4s ease-out forwards;
-}
-
-.animate-slide-in-bottom {
-  animation: slide-in-bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slide-in-bottom {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+/* MASQUER SCROLLBARS */
+* { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+*::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }

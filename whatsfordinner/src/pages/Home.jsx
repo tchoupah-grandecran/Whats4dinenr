@@ -3,9 +3,11 @@ import { auth, db } from "../lib/firebase";
 import { doc, getDoc, updateDoc, setDoc, deleteDoc } from "firebase/firestore";
 import { signOut, deleteUser } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import StatusCard from "../components/StatusCard";
 import SkeletonLoader from "../components/SkeletonLoader";
-import { X, LogOut, Users, PlusCircle, ArrowRight, UserMinus, AlertTriangle, Edit2, Check } from "lucide-react";
+import { 
+  X, LogOut, PlusCircle, ArrowRight, UserMinus, Edit2, Check, 
+  Sparkles, PenLine, ShoppingBag, Utensils, ChevronRight 
+} from "lucide-react";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -14,8 +16,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [modalAction, setModalAction] = useState('none'); // 'none' | 'join' | 'create'
-  
+  const [modalAction, setModalAction] = useState('none');
   const [joinId, setJoinId] = useState("");
   const [createName, setCreateName] = useState("");
   const [actionError, setActionError] = useState("");
@@ -51,10 +52,10 @@ export default function Home() {
     try {
       const newId = `HH_${Date.now()}`;
       const name = createName.trim();
-      await setDoc(doc(db, "households", newId), { name, currentMenu: [], currentCart: [], createdAt: new Date().toISOString() });
+      await setDoc(doc(db, "households", newId), { name, currentMenu: [], currentCart: [], isMenuValidated: false, createdAt: new Date().toISOString() });
       await updateDoc(doc(db, "users", user.uid), { householdId: newId });
       setUserData(prev => ({ ...prev, householdId: newId }));
-      setHousehold({ name, currentMenu: [], currentCart: [] });
+      setHousehold({ name, currentMenu: [], currentCart: [], isMenuValidated: false });
       closeModal();
     } catch (e) { setActionError("Erreur lors de la création."); } finally { setIsProcessing(false); }
   };
@@ -99,8 +100,42 @@ export default function Home() {
     setIsProfileOpen(false); setModalAction('none'); setJoinId(""); setCreateName(""); setActionError(""); setIsEditingName(false);
   };
 
+  const getCycleState = () => {
+    if (!household) return null;
+    const menuCount = household.currentMenu?.length || 0;
+    const isValidated = household.isMenuValidated || false;
+    const uncheckedCartItems = (household.currentCart || []).filter(i => !i.checked).length;
+
+    if (menuCount === 0) return {
+      step: 1, icon: Sparkles, color: "text-mint-deep", bg: "bg-mint-deep/10",
+      title: "C'est l'heure du menu !", desc: "Générez vos 7 repas de la semaine en un clic.", 
+      btnText: "Générer mon menu", action: () => navigate("/menu")
+    };
+
+    if (menuCount > 0 && !isValidated) return {
+      step: 2, icon: PenLine, color: "text-orange-500", bg: "bg-orange-500/10",
+      title: "Menu en brouillon", desc: "Ajustez vos recettes et validez pour créer la liste de courses.", 
+      btnText: "Vérifier le menu", action: () => navigate("/menu")
+    };
+
+    if (menuCount > 0 && isValidated && uncheckedCartItems > 0) return {
+      step: 3, icon: ShoppingBag, color: "text-forest-deepest", bg: "bg-forest-deepest/10",
+      title: "Direction les rayons !", desc: `Il vous reste ${uncheckedCartItems} article(s) à acheter.`, 
+      btnText: "Voir la liste de courses", action: () => navigate("/cart"),
+      secondaryBtnText: "Voir le menu en cours", secondaryAction: () => navigate("/menu")
+    };
+
+    return {
+      step: 4, icon: Utensils, color: "text-gold-deep", bg: "bg-gold-deep/10",
+      title: "Aux fourneaux !", desc: "Le frigo est plein, il n'y a plus qu'à cuisiner.", 
+      btnText: "Voir les recettes", action: () => navigate("/menu")
+    };
+  };
+
+  const cycleState = getCycleState();
+
   if (loading) return (
-    <div className="pt-6">
+    <div className="pt-6 px-4">
       <SkeletonLoader type="header" />
       <SkeletonLoader type="home" />
     </div>
@@ -108,61 +143,105 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-[90vh] py-6 px-4 animate-fade-in">
-      <header className="flex justify-between items-center mb-8 px-2">
+      
+      <header className="flex justify-between items-center mb-10 px-2">
         <div>
-          <p className="font-display text-text-muted text-[10px] uppercase tracking-[0.2em] font-bold mb-1">
+          <p className="font-display text-forest-deepest/50 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">
             {userData?.householdId ? `Foyer • ${household?.name}` : "Configuration"}
           </p>
-          <h1 className="font-display text-3xl font-black text-white tracking-tight leading-none">Hello, {userData?.firstName}</h1>
+          <h1 className="font-display text-3xl font-black text-forest-deepest tracking-tight leading-none">
+            Hello, {userData?.firstName || "Chef"}
+          </h1>
         </div>
-        <div onClick={() => setIsProfileOpen(true)} className="w-12 h-12 rounded-full glass-panel flex items-center justify-center text-gold font-display font-black text-lg cursor-pointer hover:scale-105 transition-transform border border-white/10">
-          {userData?.firstName?.[0]?.toUpperCase()}
+        <div 
+          onClick={() => setIsProfileOpen(true)} 
+          className="w-12 h-12 rounded-full glass-panel flex items-center justify-center text-forest-deepest font-display font-black text-lg cursor-pointer hover:scale-105 transition-transform border border-forest-deepest/10 shadow-sm"
+        >
+          {userData?.firstName?.[0]?.toUpperCase() || "C"}
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col justify-center">
+      <main className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
         {!userData?.householdId ? (
           <div className="glass-card text-center py-10">
-            <h2 className="text-xl font-display font-bold text-white mb-4">Bienvenue !</h2>
-            <p className="text-text-secondary text-sm mb-8 px-4">Créez votre foyer ou rejoignez celui de votre partenaire.</p>
+            <h2 className="text-xl font-display font-bold text-forest-deepest mb-4">Bienvenue !</h2>
+            <p className="text-forest-deepest/60 text-sm mb-8 px-4">Créez votre propre foyer ou rejoignez celui de votre partenaire.</p>
             <div className="flex flex-col gap-4 px-4">
               <button onClick={() => { setIsProfileOpen(true); setModalAction('create'); }} className="btn-primary w-full">Créer un foyer</button>
               <button onClick={() => { setIsProfileOpen(true); setModalAction('join'); }} className="btn-secondary w-full">Rejoindre un foyer</button>
             </div>
           </div>
-        ) : (
-          <StatusCard status={household?.currentMenu?.length > 0 ? 'menu-ready' : 'no-menu'} />
-        )}
+        ) : cycleState ? (
+          /* PADDING MODIFIÉ ICI : pt-8 px-8 pb-5 au lieu de p-8 */
+          <div className="glass-card flex flex-col items-center pt-8 px-8 pb-5 text-center relative overflow-hidden group">
+            <div className="absolute top-0 left-0 right-0 flex justify-between px-8 pt-4">
+              {[1, 2, 3, 4].map((step) => (
+                <div key={step} className={`h-1.5 flex-1 mx-0.5 rounded-full transition-all duration-500 ${cycleState.step >= step ? 'bg-forest-deepest' : 'bg-forest-deepest/10'}`} />
+              ))}
+            </div>
+            
+            <div className={`w-24 h-24 rounded-full ${cycleState.bg} ${cycleState.color} flex items-center justify-center mb-6 mt-6 shadow-inner transition-transform duration-500 group-hover:scale-110`}>
+              <cycleState.icon size={40} strokeWidth={1.5} />
+            </div>
+            
+            <h2 className="font-display font-black text-2xl text-forest-deepest mb-3 tracking-tight">{cycleState.title}</h2>
+            
+            {/* MARGE MODIFIÉE ICI : mb-12 au lieu de mb-8 */}
+            <p className="text-forest-deepest/60 text-[15px] mb-12 leading-relaxed max-w-[250px]">{cycleState.desc}</p>
+            
+            <div className="w-full flex flex-col gap-2">
+              <button onClick={cycleState.action} className="btn-primary w-full shadow-[0_8px_30px_rgba(6,9,7,0.15)] group-hover:shadow-[0_8px_30px_rgba(6,9,7,0.25)] flex justify-center items-center gap-2">
+                {cycleState.btnText} <ChevronRight size={18} />
+              </button>
+              
+              {cycleState.secondaryBtnText && (
+                <button 
+                  onClick={cycleState.secondaryAction} 
+                  /* HAUTEUR MODIFIÉE ICI : py-2 au lieu de py-3 */
+                  className="w-full py-2 text-xs font-bold uppercase tracking-widest text-forest-deepest/50 hover:text-forest-deepest transition-colors rounded-full hover:bg-forest-deepest/5"
+                >
+                  {cycleState.secondaryBtnText}
+                </button>
+              )}
+            </div>
+
+          </div>
+        ) : null}
       </main>
 
-      {/* MODALE DE PROFIL RESTAURÉE */}
+      {/* MODALE DE PROFIL */}
       {isProfileOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm glass-panel rounded-3xl p-6 shadow-2xl relative animate-slide-in-bottom max-h-[90vh] overflow-y-auto scrollbar-hide">
-            <button onClick={closeModal} className="absolute top-4 right-4 text-white/40 hover:text-white"><X size={24} /></button>
+          <div className="w-full max-w-sm bg-forest-deepest border border-[#a7f3d0]/20 rounded-[2rem] p-6 shadow-2xl relative animate-slide-in-bottom max-h-[90vh] overflow-y-auto scrollbar-hide">
             
-            <div className="flex flex-col items-center mt-2 mb-8">
-              <div className="w-20 h-20 rounded-full glass-panel flex items-center justify-center text-gold font-black text-3xl mb-4 border border-white/10">{userData?.firstName?.[0]}</div>
-              <h2 className="text-white font-display font-black text-2xl tracking-tight">{userData?.firstName}</h2>
-              <p className="text-text-muted text-sm font-body">{user?.email}</p>
+            <button onClick={closeModal} className="absolute top-5 right-5 text-[#ffffff]/40 hover:text-[#a7f3d0] transition-colors">
+              <X size={24} />
+            </button>
+            
+            <div className="flex flex-col items-center mt-4 mb-8">
+              <div className="w-20 h-20 rounded-full bg-[#a7f3d0]/10 flex items-center justify-center text-[#a7f3d0] font-display font-black text-4xl mb-4 border border-[#a7f3d0]/20 shadow-inner">
+                {userData?.firstName?.[0] || "C"}
+              </div>
+              <h2 className="text-[#ffffff] font-display font-black text-2xl tracking-tight">{userData?.firstName || "Chef"}</h2>
+              <p className="text-[#a7f3d0]/70 text-sm font-body">{user?.email}</p>
             </div>
 
             {userData?.householdId && (
-              <div className="bg-black/20 rounded-2xl p-4 mb-6 border border-white/5">
+              <div className="bg-[#ffffff]/5 rounded-2xl p-4 mb-8 border border-[#ffffff]/10">
                 <div className="flex justify-between items-start mb-2">
-                  <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Foyer Actuel</span>
-                  <span className="text-[9px] font-mono text-white/40">{userData.householdId}</span>
+                  <span className="text-[10px] font-bold text-[#a7f3d0]/70 uppercase tracking-widest">Foyer Actuel</span>
+                  <span className="text-[9px] font-mono text-[#ffffff]/30">{userData.householdId}</span>
                 </div>
                 {!isEditingName ? (
                   <div className="flex items-center gap-2 group">
-                    <p className="text-white font-bold text-lg">{household?.name}</p>
-                    <button onClick={() => {setNewHouseholdName(household?.name?.trim() || ""); setIsEditingName(true);}} className="text-white/30 hover:text-white"><Edit2 size={14}/></button>
+                    <p className="text-[#ffffff] font-bold text-lg">{household?.name}</p>
+                    <button onClick={() => {setNewHouseholdName(household?.name?.trim() || ""); setIsEditingName(true);}} className="text-[#ffffff]/40 hover:text-[#a7f3d0] transition-colors"><Edit2 size={14}/></button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
-                    <input type="text" value={newHouseholdName} onChange={e => setNewHouseholdName(e.target.value)} className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1 text-white text-sm outline-none focus:border-mint/50" />
-                    <button onClick={handleRenameHousehold} className="text-mint"><Check size={20}/></button>
-                    <button onClick={() => setIsEditingName(false)} className="text-white/40"><X size={20}/></button>
+                    <input type="text" value={newHouseholdName} onChange={e => setNewHouseholdName(e.target.value)} className="flex-1 bg-[#ffffff]/5 border border-[#ffffff]/20 rounded-lg px-3 py-1.5 text-[#ffffff] text-sm outline-none focus:border-[#a7f3d0] shadow-inner" />
+                    <button onClick={handleRenameHousehold} className="text-[#a7f3d0]"><Check size={20}/></button>
+                    <button onClick={() => setIsEditingName(false)} className="text-[#ffffff]/40"><X size={20}/></button>
                   </div>
                 )}
               </div>
@@ -170,31 +249,41 @@ export default function Home() {
 
             <div className="flex flex-col gap-3 mb-8">
               {modalAction === 'join' ? (
-                <div className="bg-black/30 p-3 rounded-xl border border-mint/20 animate-fade-in">
-                  <input type="text" value={joinId} onChange={e => setJoinId(e.target.value)} placeholder="ID du foyer..." className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white text-sm mb-2 outline-none focus:border-mint/50" />
+                <div className="bg-[#ffffff]/5 p-3 rounded-xl border border-[#ffffff]/10 animate-fade-in">
+                  <input type="text" value={joinId} onChange={e => setJoinId(e.target.value)} placeholder="ID du foyer..." className="w-full bg-[#ffffff]/5 border border-[#ffffff]/10 rounded-lg p-3 text-[#ffffff] placeholder-[#ffffff]/40 text-sm mb-3 outline-none focus:border-[#a7f3d0] shadow-inner" />
                   <div className="flex gap-2">
-                    <button onClick={handleJoinHousehold} className="btn-primary flex-1 py-2 text-xs">Valider</button>
-                    <button onClick={() => setModalAction('none')} className="btn-ghost flex-1 py-2 text-xs">Annuler</button>
+                    <button onClick={handleJoinHousehold} disabled={isProcessing} className="bg-[#a7f3d0] hover:bg-[#10b981] text-forest-deepest font-bold flex-1 py-2.5 rounded-full text-xs transition-colors">Valider</button>
+                    <button onClick={() => setModalAction('none')} className="bg-[#ffffff]/10 hover:bg-[#ffffff]/20 text-[#ffffff] font-bold flex-1 py-2.5 rounded-full text-xs transition-colors">Annuler</button>
                   </div>
+                  {actionError && <p className="text-red-400 text-xs mt-3 text-center">{actionError}</p>}
                 </div>
               ) : modalAction === 'create' ? (
-                <div className="bg-black/30 p-3 rounded-xl border-gold/20 animate-fade-in">
-                  <input type="text" value={createName} onChange={e => setCreateName(e.target.value)} placeholder="Nom du foyer..." className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white text-sm mb-2 outline-none focus:border-gold/50" />
+                <div className="bg-[#ffffff]/5 p-3 rounded-xl border border-[#ffffff]/10 animate-fade-in">
+                  <input type="text" value={createName} onChange={e => setCreateName(e.target.value)} placeholder="Nom du foyer..." className="w-full bg-[#ffffff]/5 border border-[#ffffff]/10 rounded-lg p-3 text-[#ffffff] placeholder-[#ffffff]/40 text-sm mb-3 outline-none focus:border-[#a7f3d0] shadow-inner" />
                   <div className="flex gap-2">
-                    <button onClick={handleCreateHousehold} className="btn-primary flex-1 py-2 text-xs">Créer</button>
-                    <button onClick={() => setModalAction('none')} className="btn-ghost flex-1 py-2 text-xs">Annuler</button>
+                    <button onClick={handleCreateHousehold} disabled={isProcessing} className="bg-[#a7f3d0] hover:bg-[#10b981] text-forest-deepest font-bold flex-1 py-2.5 rounded-full text-xs transition-colors">Créer</button>
+                    <button onClick={() => setModalAction('none')} className="bg-[#ffffff]/10 hover:bg-[#ffffff]/20 text-[#ffffff] font-bold flex-1 py-2.5 rounded-full text-xs transition-colors">Annuler</button>
                   </div>
+                  {actionError && <p className="text-red-400 text-xs mt-3 text-center">{actionError}</p>}
                 </div>
               ) : (
                 <>
-                  <button onClick={() => setModalAction('join')} className="btn-ghost w-full justify-start text-xs"><ArrowRight size={16} className="text-mint"/> Rejoindre un foyer</button>
-                  <button onClick={() => setModalAction('create')} className="btn-ghost w-full justify-start text-xs"><PlusCircle size={16} className="text-gold"/> Créer un foyer</button>
+                  <button onClick={() => setModalAction('join')} className="w-full flex items-center gap-3 bg-[#ffffff]/5 hover:bg-[#ffffff]/10 text-[#ffffff] p-3.5 rounded-xl text-xs font-bold transition-colors">
+                    <ArrowRight size={16} className="text-[#a7f3d0]"/> Rejoindre un foyer
+                  </button>
+                  <button onClick={() => setModalAction('create')} className="w-full flex items-center gap-3 bg-[#ffffff]/5 hover:bg-[#ffffff]/10 text-[#ffffff] p-3.5 rounded-xl text-xs font-bold transition-colors">
+                    <PlusCircle size={16} className="text-[#a7f3d0]"/> Créer un foyer
+                  </button>
                 </>
               )}
             </div>
 
-            <button onClick={handleLogout} className="btn-secondary w-full mb-4"><LogOut size={18} /> Déconnexion</button>
-            <button onClick={handleDeleteAccount} className="btn-danger w-full text-xs py-3 border-none bg-transparent hover:bg-red-500/5"><UserMinus size={16} /> Supprimer le compte</button>
+            <button onClick={handleLogout} className="w-full bg-[#a7f3d0] hover:bg-[#10b981] text-forest-deepest font-display font-bold py-3.5 rounded-full flex justify-center items-center gap-2 mb-4 hover:scale-[0.98] transition-all uppercase tracking-wider text-sm">
+              <LogOut size={18} /> Déconnexion
+            </button>
+            <button onClick={handleDeleteAccount} className="w-full flex items-center justify-center gap-2 text-xs py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-full transition-colors font-bold uppercase tracking-wider">
+              <UserMinus size={16} /> Supprimer le compte
+            </button>
           </div>
         </div>
       )}
