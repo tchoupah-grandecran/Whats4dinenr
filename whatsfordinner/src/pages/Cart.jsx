@@ -148,7 +148,7 @@ export default function Cart() {
 
         {/* TOGGLE VUE */}
         <div className="flex bg-forest-deepest/5 p-1 rounded-xl mb-6 shadow-inner transition-colors">
-          <button onClick={() => setViewMode("list")} className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-bold rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-forest-deepest shadow-sm' : 'text-forest-deepest/40'}`}><List size={16} /> Rayons</button>
+          <button onClick={() => setViewMode("list")} className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-bold rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-forest-deepest shadow-sm' : 'text-forest-deepest/40'}`}><List size={16} /> Aisles</button>
           <button onClick={() => setViewMode("recipe")} className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-bold rounded-lg transition-all ${viewMode === 'recipe' ? 'bg-white text-forest-deepest shadow-sm' : 'text-forest-deepest/40'}`}><ChefHat size={16} /> Recettes</button>
         </div>
 
