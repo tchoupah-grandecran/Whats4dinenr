@@ -8,12 +8,13 @@ import BottomNav from './components/BottomNav';
 import Import from './pages/Import';
 import ImportRayons from './pages/ImportRayon';
 
+// App.jsx modifié
 function AppLayout() {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
 
   return (
-    <main className="max-w-md mx-auto relative min-h-screen pb-24">
+    <main className="w-full max-w-[1400px] mx-auto relative min-h-screen pb-24">
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Home />} />

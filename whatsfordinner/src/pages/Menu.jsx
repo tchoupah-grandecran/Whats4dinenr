@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { auth, db } from "../lib/firebase";
 import { doc, getDoc, updateDoc, collection, getDocs, onSnapshot } from "firebase/firestore";
-import { CalendarDays, RefreshCw, ChefHat, Trash2, CheckCircle2, Utensils, ExternalLink } from "lucide-react";
+import { LayoutList, RefreshCw, ChefHat, Trash2, CheckCircle2, Utensils, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SkeletonLoader from "../components/SkeletonLoader";
 
@@ -77,13 +77,10 @@ export default function Menu() {
     try {
       const houseSnap = await getDoc(doc(db, "households", householdId));
       const currentCart = houseSnap.data()?.currentCart || [];
-      const manualItems = currentCart.filter(item => item.type !== 'menu');
+      
+      // Si on valide le menu, on repart d'un panier vide pour les manuels
+      const manualItems = markValidated ? [] : currentCart.filter(item => item.type !== 'menu');
       const oldMenuItems = currentCart.filter(item => item.type === 'menu');
-
-      if (oldMenuItems.length === 0 && !forceSyncCart) {
-        await updateDoc(doc(db, "households", householdId), { currentMenu: newMenu });
-        return;
-      }
 
       const ingMap = {};
       newMenu.forEach(recipe => {
@@ -102,13 +99,21 @@ export default function Menu() {
         type: 'menu'
       }));
 
-      const mergedMenuItems = newMenuItems.map(newItem => {
-        const existing = oldMenuItems.find(old => old.baseName === newItem.baseName);
-        return existing ? { ...newItem, checked: existing.checked } : newItem;
-      });
+      // Fusion des états 'checked' si on ne valide pas (simple modification de recette)
+      const mergedMenuItems = markValidated 
+        ? newMenuItems 
+        : newMenuItems.map(newItem => {
+            const existing = oldMenuItems.find(old => old.baseName === newItem.baseName);
+            return existing ? { ...newItem, checked: existing.checked } : newItem;
+          });
 
-      const payload = { currentMenu: newMenu, currentCart: [...manualItems, ...mergedMenuItems] };
+      const payload = { 
+        currentMenu: newMenu, 
+        currentCart: [...manualItems, ...mergedMenuItems] 
+      };
+      
       if (markValidated) payload.isMenuValidated = true;
+      
       await updateDoc(doc(db, "households", householdId), payload);
       if (redirect) navigate("/cart");
     } finally { setIsValidating(false); }
@@ -120,13 +125,11 @@ export default function Menu() {
     try {
       const shuffled = [...allRecipes].sort(() => 0.5 - Math.random());
       const selectedRecipes = shuffled.slice(0, 7);
-
-      const houseSnap = await getDoc(doc(db, "households", householdId));
-      const manualItems = (houseSnap.data()?.currentCart || []).filter(item => item.type !== 'menu');
       
+      // ACTION : On vide entièrement le panier lors de la génération
       await updateDoc(doc(db, "households", householdId), { 
         currentMenu: selectedRecipes,
-        currentCart: manualItems,
+        currentCart: [], // Vide les recettes ET les items manuels
         isMenuValidated: false 
       });
     } finally {
@@ -160,7 +163,7 @@ export default function Menu() {
       
       <header className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-forest-deepest"><CalendarDays size={20} /></div>
+          <div className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-forest-deepest"><LayoutList size={20} /></div>
           <div>
             <h1 className="font-display text-2xl font-black text-forest-deepest leading-tight">Menu Hebdo</h1>
             {menu.length > 0 && (
@@ -172,9 +175,8 @@ export default function Menu() {
         </div>
         {menu.length > 0 && (
           <button 
-            onClick={() => { if(window.confirm("Générer un tout nouveau menu de 7 recettes ? L'actuel sera écrasé.")) generateMenu(); }} 
+            onClick={() => { if(window.confirm("Générer un tout nouveau menu ? Le panier actuel (ingrédients et extras) sera entièrement vidé.")) generateMenu(); }} 
             className="p-2.5 rounded-full text-forest-deepest/60 hover:text-forest-deepest hover:bg-forest-deepest/5 transition-colors"
-            title="Générer un tout nouveau menu"
           >
             <RefreshCw size={18} className={isGenerating ? "animate-spin" : ""} />
           </button>
@@ -186,14 +188,14 @@ export default function Menu() {
           <div className="w-24 h-24 rounded-full glass-panel flex items-center justify-center text-forest-deepest/40 mb-6 shadow-xl">
             <ChefHat size={40} />
           </div>
-          <h2 className="font-display font-black text-xl text-forest-deepest mb-3">Planifiez votre semaine</h2>
-          <p className="text-forest-deepest/70 text-sm mb-10 leading-relaxed">
-            Nous allons tirer 7 recettes au hasard parmi les {allRecipes.length} recettes de votre Foyer pour composer votre menu.
+          <h2 className="font-display font-black text-xl text-forest-deepest mb-3 text-center">Planifiez votre semaine</h2>
+          <p className="text-forest-deepest/70 text-sm mb-10 leading-relaxed text-center">
+            7 recettes seront tirées au hasard. Le panier sera vidé de tous ses articles actuels.
           </p>
           <button 
             onClick={generateMenu} 
             disabled={isGenerating || allRecipes.length === 0} 
-            className="btn-primary w-full max-w-xs shadow-[0_10px_30px_rgba(6,9,7,0.15)]"
+            className="btn-primary w-full max-w-xs"
           >
             {isGenerating ? <RefreshCw className="animate-spin" size={20} /> : <ChefHat size={20} />}
             Générer mon menu
@@ -205,23 +207,18 @@ export default function Menu() {
             const status = getRecipeStatus(recipe);
             return (
               <div key={index} className="glass-card relative overflow-hidden group">
-                
-                {/* Barre latérale colorée (Vert foncé) si le repas est prêt */}
                 {status === 'ready' && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-mint-deep shadow-[2px_0_10px_rgba(16,185,129,0.3)]" />}
                 
                 <div className="flex justify-between items-center gap-4">
                   <div className="min-w-0 flex-1 pl-1">
                     <h3 className="text-forest-deepest font-bold text-lg leading-tight truncate">{recipe.name}</h3>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      {/* Le tag Protéine utilise le style badge par défaut (Gris/Vert subtil) */}
                       <span className="badge">{recipe.protein}</span>
-                      
-                      {/* NOUVEAU : Les tags de statuts très lisibles */}
                       {status && (
                         <span className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                           status === 'ready' 
-                            ? 'bg-mint-deep/15 text-mint-deep' /* Vert intense pour Prêt */
-                            : 'bg-orange-500/15 text-orange-600' /* Orange doux pour Courses */
+                            ? 'bg-mint-deep/15 text-mint-deep'
+                            : 'bg-orange-500/15 text-orange-600'
                         }`}>
                           {status === 'ready' ? '● Prêt' : '○ Courses'}
                         </span>
@@ -235,18 +232,18 @@ export default function Menu() {
                         <button onClick={() => swapRecipe(index)} className="btn-ghost" title="Changer cette recette">
                           <RefreshCw size={16} />
                         </button>
-                        <button onClick={() => syncMenuAndCart(menu.filter((_, i) => i !== index))} className="p-2.5 rounded-full text-red-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Retirer">
+                        <button onClick={() => syncMenuAndCart(menu.filter((_, i) => i !== index))} className="p-2.5 rounded-full text-red-400 hover:text-red-500 hover:bg-red-50 transition-colors">
                           <Trash2 size={16} />
                         </button>
                       </>
                     ) : (
                       <>
                         {recipe.pdfLink && (
-                          <a href={recipe.pdfLink} target="_blank" rel="noreferrer" className="btn-ghost" title="Voir la recette">
+                          <a href={recipe.pdfLink} target="_blank" rel="noreferrer" className="btn-ghost">
                             <ExternalLink size={16}/>
                           </a>
                         )}
-                        <button onClick={() => syncMenuAndCart(menu.filter((_, i) => i !== index), {forceSyncCart: true})} className="p-2.5 rounded-full text-mint-deep hover:text-forest-deepest hover:bg-mint transition-colors" title="Marqué comme cuisiné">
+                        <button onClick={() => syncMenuAndCart(menu.filter((_, i) => i !== index), {forceSyncCart: true})} className="p-2.5 rounded-full text-mint-deep hover:text-forest-deepest hover:bg-mint transition-colors">
                           <Utensils size={16}/>
                         </button>
                       </>

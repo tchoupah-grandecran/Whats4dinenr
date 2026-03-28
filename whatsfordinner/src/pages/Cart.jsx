@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { auth, db } from "../lib/firebase";
 import { doc, getDoc, updateDoc, onSnapshot, collection, getDocs } from "firebase/firestore";
-import { ShoppingBag, Plus, Circle, CheckCircle2, Trash2, List, ChefHat, Store, ChevronDown, ChevronUp } from "lucide-react";
+import { ShoppingBasket, Plus, Circle, CheckCircle2, Trash2, List, ChefHat, Store, ChevronDown, ChevronUp } from "lucide-react";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 export default function Cart() {
@@ -140,7 +140,7 @@ export default function Cart() {
         {/* HEADER */}
         <header className="mb-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-forest-deepest shadow-sm"><ShoppingBag size={20} /></div>
+            <div className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-forest-deepest shadow-sm"><ShoppingBasket size={20} /></div>
             <h1 className="text-2xl font-black text-forest-deepest font-display tracking-tight">Courses</h1>
           </div>
           <button onClick={() => { if(window.confirm("Vider tout le panier ?")) updateDoc(householdRef, { currentCart: [] }) }} className="p-2 rounded-full w-10 h-10 text-red-400 hover:bg-red-50 transition-colors flex items-center justify-center"><Trash2 size={18} /></button>
@@ -148,7 +148,7 @@ export default function Cart() {
 
         {/* TOGGLE VUE */}
         <div className="flex bg-forest-deepest/5 p-1 rounded-xl mb-6 shadow-inner transition-colors">
-          <button onClick={() => setViewMode("list")} className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-bold rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-forest-deepest shadow-sm' : 'text-forest-deepest/40'}`}><List size={16} /> Aisles</button>
+          <button onClick={() => setViewMode("list")} className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-bold rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-forest-deepest shadow-sm' : 'text-forest-deepest/40'}`}><List size={16} /> Rayons</button>
           <button onClick={() => setViewMode("recipe")} className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-bold rounded-lg transition-all ${viewMode === 'recipe' ? 'bg-white text-forest-deepest shadow-sm' : 'text-forest-deepest/40'}`}><ChefHat size={16} /> Recettes</button>
         </div>
 
