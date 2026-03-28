@@ -183,7 +183,7 @@ export default function Recipes() {
             <div key={recipe.id} className="glass-card flex flex-col justify-between group h-auto">
               <div className="flex justify-between items-start gap-4 mb-3">
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-black text-forest-deepest leading-tight mb-2 uppercase line-clamp-2">{recipe.name}</h2>
+                  <h2 className="text-lg font-black text-forest-deepest leading-tight mb-2 line-clamp-2">{recipe.name}</h2>
                   
                   <div className="flex flex-wrap gap-1 mt-1">
                     {recipe.tags && recipe.tags.map((tag, idx) => (
