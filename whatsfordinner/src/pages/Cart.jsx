@@ -3,6 +3,7 @@ import { auth, db } from "../lib/firebase";
 import { doc, getDoc, updateDoc, onSnapshot, collection, getDocs } from "firebase/firestore";
 import { ShoppingBasket, Plus, Circle, CheckCircle2, Trash2, List, ChefHat, Store, ChevronDown, ChevronUp } from "lucide-react";
 import SkeletonLoader from "../components/SkeletonLoader";
+import PageHeader from "../components/PageHeader";
 
 export default function Cart() {
   const [householdRef, setHouseholdRef] = useState(null);
@@ -135,16 +136,21 @@ export default function Cart() {
         }
       `}</style>
 
-      <div className="flex flex-col min-h-screen py-6 px-4 pb-40 animate-fade-in">
+      <div className="flex flex-col min-h-screen py-24 px-4 pb-40 animate-fade-in">
         
         {/* HEADER */}
-        <header className="mb-6 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-forest-deepest shadow-sm"><ShoppingBasket size={20} /></div>
-            <h1 className="text-2xl font-black text-forest-deepest font-display tracking-tight">Courses</h1>
-          </div>
-          <button onClick={() => { if(window.confirm("Vider tout le panier ?")) updateDoc(householdRef, { currentCart: [] }) }} className="p-2 rounded-full w-10 h-10 text-red-400 hover:bg-red-50 transition-colors flex items-center justify-center"><Trash2 size={18} /></button>
-        </header>
+        <PageHeader 
+  subtitle={`${pendingItems.length} articles restants`}
+  title="Courses"
+  actionNode={
+    <button 
+      onClick={() => { if(window.confirm("Vider tout le panier ?")) updateDoc(householdRef, { currentCart: [] }) }} 
+      className="w-12 h-12 rounded-2xl glass-panel flex items-center justify-center text-red-500 hover:bg-red-50 transition-colors border border-red-500/10 shadow-sm"
+    >
+      <Trash2 size={20} />
+    </button>
+  }
+/>
 
         {/* TOGGLE VUE */}
         <div className="flex bg-forest-deepest/5 p-1 rounded-xl mb-6 shadow-inner transition-colors">

@@ -12,7 +12,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 w-full z-50 bg-mint border-t border-forest-deepest/10 shadow-[0_-4px_20px_rgba(6,9,7,0.05)] pb-[env(safe-area-inset-bottom)] pointer-events-auto">
+    <div className="fixed bottom-0 left-0 w-full z-20 bg-mint border-t border-forest-deepest/10 shadow-[0_-4px_20px_rgba(6,9,7,0.05)] pb-[env(safe-area-inset-bottom)] pointer-events-auto">
       
       <nav className="flex justify-around items-center h-[70px] px-2 max-w-3xl mx-auto">
         {navItems.map((item) => {

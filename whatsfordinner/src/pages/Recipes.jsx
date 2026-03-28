@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import SkeletonLoader from "../components/SkeletonLoader";
+import PageHeader from "../components/PageHeader";
+
 
 export default function Recipes() {
   const [recipes, setRecipes] = useState([]);
@@ -103,13 +105,19 @@ export default function Recipes() {
   if (loading) return <div className="p-6 w-full"><SkeletonLoader type="header" /><div className="grid gap-4 mt-6">{[...Array(6)].map((_, i) => <SkeletonLoader key={i} type="recipe-card" />)}</div></div>;
 
   return (
-    <div className="flex flex-col min-h-screen py-6 px-4 md:px-8 animate-fade-in w-full">
-      <header className="mb-6 flex justify-between items-center w-full">
-        <h1 className="text-2xl md:text-3xl font-black text-forest-deepest font-display tracking-tight uppercase">Recettes</h1>
-        <Link to="/import" className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-forest-deepest/60 shadow-sm hover:bg-forest-deepest hover:text-white transition-all">
-          <DatabaseBackup size={18} />
-        </Link>
-      </header>
+    <div className="flex flex-col min-h-screen py-24 px-4 md:px-8 animate-fade-in w-full">
+      <PageHeader 
+  subtitle={`${recipes.length} recettes disponibles`}
+  title="Grimoire"
+  actionNode={
+    <Link 
+      to="/import" 
+      className="w-12 h-12 rounded-2xl glass-panel flex items-center justify-center text-forest-deepest hover:bg-forest-deepest hover:text-white transition-all border border-forest-deepest/10 shadow-sm"
+    >
+      <DatabaseBackup size={20} />
+    </Link>
+  }
+/>
 
       {/* RECHERCHE ET TRI */}
       <div className="flex gap-3 mb-6 w-full">
