@@ -4,16 +4,37 @@ import { auth, db } from "../lib/firebase";
 import { doc, getDoc, updateDoc, collection, getDocs, onSnapshot } from "firebase/firestore";
 import { 
   RefreshCw, ChefHat, Trash2, CheckCircle2, Utensils, ExternalLink, 
-  X, Clock, Beef, Drumstick, Fish, Leaf, Check 
+  X, Clock, Beef, Drumstick, Fish, Leaf, Check,
+  Minus, Plus, Wheat, Milk, BottleWine, Ham
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SkeletonLoader from "../components/SkeletonLoader";
 import PageHeader from "../components/PageHeader";
 
+// Icône SVG personnalisée pour la Cacahuète (imitant le style Lucide-react)
+const PeanutIcon = ({ size = 24, className = "" }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M14.6 9.4A5.5 5.5 0 0 0 8 5 5 5 0 0 0 3.3 9.4c-.6.9-.9 2.5-.2 4a5 5 0 0 0 4.7 3.6 5.5 5.5 0 0 0 6.6 4.4 5 5 0 0 0 4.7-3.6c.7-1.5.4-3.1-.2-4a5.5 5.5 0 0 0-4.3-4.4z"/>
+    <path d="M12 12c.5-.5 1-1 2-1" />
+    <path d="M9 13c-.5.5-1 1-2 1" />
+  </svg>
+);
+
 export default function Menu() {
   const navigate = useNavigate();
   const [householdId, setHouseholdId] = useState(null);
-  const [userData, setUserData] = useState(null); // Ajout de userData pour récupérer l'ID
+  const [userData, setUserData] = useState(null);
   const [allRecipes, setAllRecipes] = useState([]);
   const [menu, setMenu] = useState([]);
   const [cart, setCart] = useState([]);
@@ -24,9 +45,13 @@ export default function Menu() {
   
   // --- ÉTATS POUR LES FILTRES DU MENU ---
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [filterExpress, setFilterExpress] = useState(false); // Max 30 min
-  const [filterProteins, setFilterProteins] = useState([]); // ['poulet', 'bœuf', 'porc', 'poisson']
-  const [filterTag, setFilterTag] = useState(""); // 'sans gluten', 'végétarien', etc.
+  const [recipeCount, setRecipeCount] = useState(7);
+  const [filterExpress, setFilterExpress] = useState(false);
+  const [filterProteins, setFilterProteins] = useState([]);
+  const [filterTags, setFilterTags] = useState([]);
+
+  // --- ÉTAT POUR L'ACCORDÉON DES COURSES ---
+  const [expandedRecipeIndex, setExpandedRecipeIndex] = useState(null);
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -135,7 +160,6 @@ export default function Menu() {
     } finally { setIsValidating(false); }
   };
 
-  // --- LOGIQUE DE FILTRAGE ---
   const availableRecipes = allRecipes?.filter(recipe => {
     if (filterExpress && parseInt(recipe.time || 999) > 30) return false;
     
@@ -144,14 +168,26 @@ export default function Menu() {
       if (!filterProteins.includes(recProt)) return false;
     }
     
-    if (filterTag === "sans gluten") {
-      const tags = recipe.tags?.map(t => t.toLowerCase()) || [];
-      if (!tags.includes("sans gluten")) return false;
-    }
-    if (filterTag === "végétarien") {
-      const recProt = recipe.protein?.toLowerCase() || "";
-      const tags = recipe.tags?.map(t => t.toLowerCase()) || [];
-      if (recProt !== "végétarien" && recProt !== "vege" && !tags.includes("végétarien")) return false;
+    const tags = recipe.tags?.map(t => t.toLowerCase().trim()) || [];
+    const ingredientsStr = JSON.stringify(recipe.ingredients || "").toLowerCase();
+
+    for (const tag of filterTags) {
+      if (tag === "végé" && !tags.includes("végé")) return false;
+      if (tag === "sans gluten" && !tags.includes("sans gluten")) return false;
+      if (tag === "sans lactose" && !tags.includes("sans lactose")) return false;
+      if (tag === "sans sauce soja" && ingredientsStr.includes("sauce soja")) return false;
+      
+      if (tag === "sans fruits à coque") {
+        if (
+          ingredientsStr.includes("cacahuète") ||
+          ingredientsStr.includes("cacahuete") ||
+          ingredientsStr.includes("amande") ||
+          ingredientsStr.includes("noisette") ||
+          ingredientsStr.includes("noix")
+        ) {
+          return false;
+        }
+      }
     }
     
     return true;
@@ -163,7 +199,7 @@ export default function Menu() {
     
     try {
       const shuffled = [...availableRecipes].sort(() => 0.5 - Math.random());
-      const selectedRecipes = shuffled.slice(0, Math.min(7, availableRecipes.length));
+      const selectedRecipes = shuffled.slice(0, Math.min(recipeCount, availableRecipes.length));
 
       await updateDoc(doc(db, "households", householdId), {
         currentMenu: selectedRecipes,
@@ -185,24 +221,52 @@ export default function Menu() {
     );
   };
 
+  const toggleDietTag = (tagId) => {
+    if (tagId === "") { setFilterTags([]); return; }
+    setFilterTags(prev => 
+      prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]
+    );
+  };
+
   const swapRecipe = (index) => {
     const currentIds = menu.map(r => r.id);
-    const available = allRecipes.filter(r => !currentIds.includes(r.id));
-    if (available.length === 0) return;
+    const available = availableRecipes.filter(r => !currentIds.includes(r.id));
+    if (available.length === 0) {
+      alert("Aucune autre recette ne correspond à vos filtres actuels.");
+      return;
+    }
     const newMenu = [...menu];
     newMenu[index] = available[Math.floor(Math.random() * available.length)];
     syncMenuAndCart(newMenu);
   };
 
-  const getRecipeStatus = (recipe) => {
-    if (!isValidated || !recipe.ingredients || recipe.ingredients.length === 0) return null;
+  // NOUVEAU : On récupère plus de détails pour le statut (nombre restants et détails)
+  const getRecipeDetails = (recipe) => {
+    if (!isValidated || !recipe.ingredients || recipe.ingredients.length === 0) return { status: null };
     const ings = recipe.ingredients.map(i => i.name.trim().toLowerCase());
     const relevantCart = cart.filter(i => ings.includes(i.baseName) && i.type === 'menu');
     
-    if (relevantCart.length === 0) return null;
-    const checked = relevantCart.filter(i => i.checked).length;
-    return checked === relevantCart.length ? 'ready' : 'missing';
+    if (relevantCart.length === 0) return { status: null };
+    
+    const missingItems = relevantCart.filter(i => !i.checked);
+    const missingCount = missingItems.length;
+    
+    return {
+      status: missingCount === 0 ? 'ready' : 'missing',
+      missingCount,
+      missingItems
+    };
   };
+
+  const getProteinIcon = (protein) => {
+  const p = protein?.toLowerCase().trim();
+  if (p === 'poulet') return <Drumstick size={12} />;
+  if (p === 'bœuf' || p === 'boeuf') return <Beef size={12} />;
+  if (p === 'poisson') return <Fish size={12} />;
+  if (p === 'porc') return <Ham size={12} />;
+  if (p === 'végétarien' || p === 'végé') return <Leaf size={12} />;
+  return <ChefHat size={12} />; // Icône par défaut
+};
 
   if (loading) return <div className="p-6 pt-24"><SkeletonLoader type="header" />{[...Array(4)].map((_, i) => <SkeletonLoader key={i} type="recipe-card" />)}</div>;
 
@@ -231,10 +295,9 @@ export default function Menu() {
           </div>
           <h2 className="font-display font-black text-xl text-forest-deepest mb-3 text-center">Planifiez votre semaine</h2>
           <p className="text-forest-deepest/70 text-sm mb-10 leading-relaxed text-center">
-            7 recettes seront tirées au hasard. Le panier sera vidé de tous ses articles actuels.
+            Configurez vos préférences pour générer votre menu de la semaine.
           </p>
           <button 
-            // CORRECTION ICI : On ouvre la modale de filtres au lieu d'une fonction inexistante
             onClick={() => setIsFilterModalOpen(true)} 
             disabled={isGenerating || allRecipes.length === 0} 
             className="btn-primary w-full max-w-xs"
@@ -246,52 +309,95 @@ export default function Menu() {
       ) : (
         <div className="flex flex-col gap-4">
           {menu.map((recipe, index) => {
-            const status = getRecipeStatus(recipe);
+            const details = getRecipeDetails(recipe);
+            const isExpanded = expandedRecipeIndex === index;
+
             return (
-              <div key={index} className="glass-card relative overflow-hidden group">
-                {status === 'ready' && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-mint-deep shadow-[2px_0_10px_rgba(16,185,129,0.3)]" />}
+              <div 
+                key={index} 
+                className={`glass-card relative overflow-hidden group transition-all duration-300 ${
+                  details.status === 'missing' ? 'cursor-pointer hover:bg-white/60' : ''
+                }`}
+                onClick={() => {
+                  // On ouvre le tiroir que si le menu est validé et qu'il manque des courses
+                  if (details.status === 'missing') {
+                    setExpandedRecipeIndex(isExpanded ? null : index);
+                  }
+                }}
+              >
+                {details.status === 'ready' && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-mint-deep shadow-[2px_0_10px_rgba(16,185,129,0.3)]" />}
                 
-                <div className="flex justify-between items-center gap-4">
+                <div className="flex justify-between items-start gap-4">
                   <div className="min-w-0 flex-1 pl-1">
-                    <h3 className="text-forest-deepest font-bold text-lg leading-tight truncate">{recipe.name}</h3>
+                    {/* MODIFICATION : Suppression de 'truncate' et ajustement pour multilignes */}
+                    <h3 className="text-forest-deepest font-bold text-lg leading-tight">{recipe.name}</h3>
+                    
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <span className="badge">{recipe.protein}</span>
-                      {status && (
+                      {recipe.protein && recipe.protein.toLowerCase() !== 'autre' && (
+  <span className="badge flex items-center gap-1.5">
+    {getProteinIcon(recipe.protein)}
+    {recipe.protein}
+  </span>
+)}
+                      
+                      {recipe.tags && recipe.tags.map((t, idx) => (
+                        <span key={idx} className="text-[9px] font-bold text-forest-deepest/40 bg-forest-deepest/5 px-2 py-0.5 rounded-full uppercase tracking-widest border border-forest-deepest/5">
+                          #{t}
+                        </span>
+                      ))}
+
+                      {details.status && (
                         <span className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                          status === 'ready' 
+                          details.status === 'ready' 
                             ? 'bg-mint-deep/15 text-mint-deep'
                             : 'bg-orange-500/15 text-orange-600'
                         }`}>
-                          {status === 'ready' ? '● Prêt' : '○ Courses'}
+                          {/* MODIFICATION : Affichage du compte précis */}
+                          {details.status === 'ready' ? '● Prêt' : `○ Courses (${details.missingCount} restant${details.missingCount > 1 ? 's' : ''})`}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0 pt-1">
+                    {/* MODIFICATION : Lien PDF toujours présent, avec stopPropagation pour ne pas déclencher le clic de la carte */}
+                    {recipe.pdfLink && (
+                      <a href={recipe.pdfLink} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="btn-ghost" title="Voir la recette">
+                        <ExternalLink size={16}/>
+                      </a>
+                    )}
+                    
                     {!isValidated ? (
                       <>
-                        <button onClick={() => swapRecipe(index)} className="btn-ghost" title="Changer cette recette">
+                        <button onClick={(e) => { e.stopPropagation(); swapRecipe(index); }} className="btn-ghost" title="Changer cette recette">
                           <RefreshCw size={16} />
                         </button>
-                        <button onClick={() => syncMenuAndCart(menu.filter((_, i) => i !== index))} className="p-2.5 rounded-full text-red-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                        <button onClick={(e) => { e.stopPropagation(); syncMenuAndCart(menu.filter((_, i) => i !== index)); }} className="p-2.5 rounded-full text-red-400 hover:text-red-500 hover:bg-red-50 transition-colors">
                           <Trash2 size={16} />
                         </button>
                       </>
                     ) : (
-                      <>
-                        {recipe.pdfLink && (
-                          <a href={recipe.pdfLink} target="_blank" rel="noreferrer" className="btn-ghost">
-                            <ExternalLink size={16}/>
-                          </a>
-                        )}
-                        <button onClick={() => syncMenuAndCart(menu.filter((_, i) => i !== index), {forceSyncCart: true})} className="p-2.5 rounded-full text-mint-deep hover:text-forest-deepest hover:bg-mint transition-colors">
-                          <Utensils size={16}/>
-                        </button>
-                      </>
+                      <button onClick={(e) => { e.stopPropagation(); syncMenuAndCart(menu.filter((_, i) => i !== index), {forceSyncCart: true}); }} className="p-2.5 rounded-full text-mint-deep hover:text-forest-deepest hover:bg-mint transition-colors">
+                        <Utensils size={16}/>
+                      </button>
                     )}
                   </div>
                 </div>
+
+                {/* MODIFICATION : Accordéon d'ingrédients manquants */}
+                {details.status === 'missing' && isExpanded && (
+                  <div className="mt-4 pt-3 border-t border-forest-deepest/5 animate-fade-in" onClick={e => e.stopPropagation()}>
+                    <p className="text-[10px] font-black text-forest-deepest/40 uppercase tracking-widest mb-2 pl-1">À acheter :</p>
+                    <ul className="flex flex-col gap-1.5 pl-1">
+                      {details.missingItems.map(item => (
+                        <li key={item.id} className="text-xs font-medium text-forest-deepest/80 flex items-start gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1.5 shrink-0" />
+                          <span className="leading-tight">{item.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -321,7 +427,7 @@ export default function Menu() {
           onClick={() => setIsFilterModalOpen(false)}
         >
           <div 
-            className="w-full max-w-sm bg-forest-deepest border border-mint/20 rounded-[2.5rem] p-8 shadow-2xl relative animate-slide-in-bottom"
+            className="w-full max-w-sm bg-forest-deepest border border-mint/20 rounded-[2.5rem] p-8 shadow-2xl relative animate-slide-in-bottom max-h-[90vh] overflow-y-auto scrollbar-hide"
             onClick={(e) => e.stopPropagation()}
           >
             <button onClick={() => setIsFilterModalOpen(false)} className="absolute top-6 right-6 text-cream/30 hover:text-mint transition-colors p-2 bg-white/5 rounded-full">
@@ -332,6 +438,28 @@ export default function Menu() {
               Préférences<br/><span className="text-mint">du Menu</span>
             </h2>
 
+            {/* NOMBRE DE RECETTES */}
+            <div className="mb-8">
+              <p className="text-[10px] font-black text-mint/50 uppercase tracking-[0.2em] mb-3">Nombre de recettes</p>
+              <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl p-2">
+                <button 
+                  onClick={() => setRecipeCount(Math.max(1, recipeCount - 1))}
+                  className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-cream hover:bg-white/10 transition-colors"
+                >
+                  <Minus size={20} />
+                </button>
+                <div className="flex flex-col items-center">
+                  <span className="text-2xl font-black text-cream leading-none">{recipeCount}</span>
+                </div>
+                <button 
+                  onClick={() => setRecipeCount(Math.min(14, recipeCount + 1))}
+                  className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-cream hover:bg-white/10 transition-colors"
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
+            </div>
+
             {/* FILTRE : TEMPS (EXPRESS) */}
             <div className="mb-8">
               <p className="text-[10px] font-black text-mint/50 uppercase tracking-[0.2em] mb-3">Temps de préparation</p>
@@ -339,13 +467,13 @@ export default function Menu() {
                 onClick={() => setFilterExpress(!filterExpress)}
                 className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border ${
                   filterExpress 
-                    ? 'bg-mint/10 border-mint/30 text-cream' /* <-- MODIFIÉ ICI : text-cream au lieu de text-mint */
+                    ? 'bg-mint/10 border-mint/30 text-cream'
                     : 'bg-white/5 border-white/5 text-cream/60 hover:bg-white/10 hover:text-cream'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Clock size={18} /> {/* L'icône reste blanche ! */}
-                  <span className="text-xs font-bold uppercase tracking-widest">Express (Max 30 min)</span> {/* Le texte reste blanc ! */}
+                  <Clock size={18} />
+                  <span className="text-xs font-bold uppercase tracking-widest">Express (Max 30 min)</span>
                 </div>
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${filterExpress ? 'border-mint bg-mint' : 'border-white/20'}`}>
                   {filterExpress && <Check size={12} className="text-forest-deepest" />}
@@ -360,7 +488,7 @@ export default function Menu() {
                 {[
                   { id: 'poulet', label: 'Poulet', icon: Drumstick },
                   { id: 'bœuf', label: 'Bœuf', icon: Beef },
-                  { id: 'porc', label: 'Porc', icon: ChefHat },
+                  { id: 'porc', label: 'Porc', icon: Ham },
                   { id: 'poisson', label: 'Poisson', icon: Fish }
                 ].map(prot => {
                   const isSelected = filterProteins.includes(prot.id);
@@ -382,23 +510,35 @@ export default function Menu() {
               </div>
             </div>
 
-            {/* FILTRE : RÉGIME / EXCLUSION */}
+            {/* FILTRE : RÉGIME / EXCLUSION CUMULABLES */}
             <div className="mb-10">
               <p className="text-[10px] font-black text-mint/50 uppercase tracking-[0.2em] mb-3">Régime & Allergies</p>
               <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => toggleDietTag("")}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all text-[10px] font-bold uppercase tracking-widest ${
+                    filterTags.length === 0 
+                      ? 'bg-white/20 border-white/40 text-cream shadow-sm' 
+                      : 'bg-transparent border-white/10 text-cream/40 hover:border-white/20 hover:text-cream/80'
+                  }`}
+                >
+                  Aucun
+                </button>
                 {[
-                  { id: '', label: 'Aucun' },
-                  { id: 'végétarien', label: 'Végétarien', icon: Leaf },
-                  { id: 'sans gluten', label: 'Sans Gluten' }
+                  { id: 'végé', label: 'Végétarien', icon: Leaf },
+                  { id: 'sans gluten', label: 'Sans Gluten', icon: Wheat },
+                  { id: 'sans lactose', label: 'Sans Lactose', icon: Milk },
+                  { id: 'sans sauce soja', label: 'Sans Soja', icon: BottleWine },
+                  { id: 'sans fruits à coque', label: 'Sans Fruits à Coque', icon: PeanutIcon }
                 ].map(tag => {
-                  const isSelected = filterTag === tag.id;
+                  const isSelected = filterTags.includes(tag.id);
                   return (
                     <button
-                      key={tag.id || 'aucun'}
-                      onClick={() => setFilterTag(tag.id)}
+                      key={tag.id}
+                      onClick={() => toggleDietTag(tag.id)}
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all ${
                         isSelected 
-                          ? 'bg-white/20 border-white/40 text-cream shadow-sm' 
+                          ? 'bg-mint border-mint text-forest-deepest shadow-sm' 
                           : 'bg-transparent border-white/10 text-cream/40 hover:border-white/20 hover:text-cream/80'
                       }`}
                     >

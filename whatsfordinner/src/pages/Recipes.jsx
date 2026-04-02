@@ -3,12 +3,11 @@ import { auth, db } from "../lib/firebase";
 import { collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from "firebase/firestore";
 import { 
   Search, Clock3, ChefHat, DatabaseBackup, Heart, 
-  ArrowUpDown, Zap, Leaf, Fish, Drumstick, Beef, Hash, ExternalLink
+  ArrowUpDown, Zap, Leaf, Fish, Drumstick, Beef, ExternalLink, Ham
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import SkeletonLoader from "../components/SkeletonLoader";
 import PageHeader from "../components/PageHeader";
-
 
 export default function Recipes() {
   const [recipes, setRecipes] = useState([]);
@@ -25,6 +24,7 @@ export default function Recipes() {
     bœuf: { label: "Bœuf", icon: Beef },
     poisson: { label: "Poisson", icon: Fish },
     végétarien: { label: "Végé", icon: Leaf },
+    porc: { label: "Porc", icon: Ham },
     default: { label: "Autre", icon: ChefHat }
   };
 
@@ -77,12 +77,20 @@ export default function Recipes() {
       const matchesSearch = r.name.toLowerCase().includes(searchTerm.toLowerCase());
       
       let matchesMainFilter = true;
-      if (activeProtein === "fav") matchesMainFilter = favorites.includes(r.id);
-      else if (activeProtein === "fast") matchesMainFilter = (parseInt(r.time) <= 20);
-      else if (activeProtein !== "all") matchesMainFilter = r.protein?.toLowerCase() === activeProtein;
+      if (activeProtein === "fav") {
+        matchesMainFilter = favorites.includes(r.id);
+      } else if (activeProtein === "fast") {
+        matchesMainFilter = (parseInt(r.time) <= 20);
+      } else if (activeProtein === "végétarien") {
+        // RÈGLE STRICTE : La recette DOIT avoir le tag exact "végé"
+        const tags = r.tags?.map(t => t.toLowerCase().trim()) || [];
+        matchesMainFilter = tags.includes("végé");
+      } else if (activeProtein !== "all") {
+        matchesMainFilter = r.protein?.toLowerCase() === activeProtein;
+      }
 
       const matchesTag = activeTag === "all" || 
-                        (r.tags && r.tags.some(t => t.toLowerCase() === activeTag.toLowerCase()));
+                        (r.tags && r.tags.some(t => t.toLowerCase().trim() === activeTag.toLowerCase().trim()));
       
       return matchesSearch && matchesMainFilter && matchesTag;
     });
@@ -102,22 +110,33 @@ export default function Recipes() {
     { id: "végétarien", label: "Végé", icon: Leaf }
   ];
 
+  // --- FONCTION SIMPLIFIÉE POUR L'AFFICHAGE DE LA PROTÉINE ---
+  const getDisplayProtein = (recipe) => {
+    const tags = recipe.tags?.map(t => t.toLowerCase().trim()) || [];
+    
+    // Si la recette possède le tag "végé", c'est l'absolue vérité : on affiche Végétarien
+    if (tags.includes("végé")) return "Végétarien";
+    
+    // Sinon, on affiche directement ce qu'il y a dans la base de données
+    return recipe.protein?.trim() || "Autre";
+  };
+
   if (loading) return <div className="p-6 w-full"><SkeletonLoader type="header" /><div className="grid gap-4 mt-6">{[...Array(6)].map((_, i) => <SkeletonLoader key={i} type="recipe-card" />)}</div></div>;
 
   return (
     <div className="flex flex-col min-h-screen py-24 px-4 md:px-8 animate-fade-in w-full">
       <PageHeader 
-  subtitle={`${recipes.length} recettes disponibles`}
-  title="Grimoire"
-  actionNode={
-    <Link 
-      to="/import" 
-      className="w-12 h-12 rounded-2xl glass-panel flex items-center justify-center text-forest-deepest hover:bg-forest-deepest hover:text-white transition-all border border-forest-deepest/10 shadow-sm"
-    >
-      <DatabaseBackup size={20} />
-    </Link>
-  }
-/>
+        subtitle={`${filteredAndSorted.length} recettes`}
+        title="Grimoire"
+        actionNode={
+          <Link 
+            to="/import" 
+            className="w-12 h-12 rounded-2xl glass-panel flex items-center justify-center text-forest-deepest hover:bg-forest-deepest hover:text-white transition-all border border-forest-deepest/10 shadow-sm"
+          >
+            <DatabaseBackup size={20} />
+          </Link>
+        }
+      />
 
       {/* RECHERCHE ET TRI */}
       <div className="flex gap-3 mb-6 w-full">
@@ -174,10 +193,13 @@ export default function Recipes() {
         ))}
       </div>
 
-      {/* GRID : Utilisation de items-start pour éviter l'étirement vertical */}
+      {/* GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 w-full items-start">
         {filteredAndSorted.map(recipe => {
-          const ProtIcon = proteinConfig[recipe.protein?.toLowerCase()]?.icon || proteinConfig.default.icon;
+          
+          // Utilisation de la logique simplifiée et propre
+          const displayProtein = getDisplayProtein(recipe);
+          const ProtIcon = proteinConfig[displayProtein.toLowerCase()]?.icon || proteinConfig.default.icon;
           
           return (
             <div key={recipe.id} className="glass-card flex flex-col justify-between group h-auto">
@@ -228,7 +250,7 @@ export default function Recipes() {
               <div className="flex justify-between items-center pt-3 mt-4 border-t border-forest-deepest/5">
                 <span className="flex items-center gap-1.5 text-[10px] font-bold text-forest-deepest/40 uppercase">
                   <ProtIcon size={12} />
-                  {recipe.protein || "Autre"}
+                  {displayProtein} 
                 </span>
                 <span className="text-[10px] font-mono font-bold text-forest-deepest/20 flex items-center gap-1">
                   <Clock3 size={12} /> {recipe.time || "--"}
