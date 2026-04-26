@@ -56,7 +56,15 @@ export default function Home() {
     try {
       const newId = `HH_${Date.now()}`;
       const name = createName.trim();
-      await setDoc(doc(db, "households", newId), { name, currentMenu: [], currentCart: [], isMenuValidated: false, createdAt: new Date().toISOString() });
+      await setDoc(doc(db, "households", newId), { 
+  name,
+  currentMenu: [], 
+  currentCart: [], 
+  isMenuValidated: false, 
+  createdAt: new Date().toISOString(),
+  ownerId: user.uid,           // ← ajout
+  memberIds: [user.uid]        // ← ajout
+});
       await updateDoc(doc(db, "users", user.uid), { householdId: newId });
       setUserData(prev => ({ ...prev, householdId: newId }));
       setHousehold({ name, currentMenu: [], currentCart: [], isMenuValidated: false });
