@@ -1,15 +1,150 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { auth, db } from "../lib/firebase";
 import { doc, getDoc, updateDoc, onSnapshot, collection, getDocs, setDoc } from "firebase/firestore";
-import { Plus, Circle, CheckCircle2, Trash2, List, ChefHat, Store, ChevronDown, ChevronUp, X } from "lucide-react";
+import { ShoppingBag, Plus, Circle, CheckCircle2, Trash2, List, ChefHat, Store, ChevronDown, ChevronUp, X, Tag, AlertCircle } from "lucide-react";
 import SkeletonLoader from "../components/SkeletonLoader";
-import PageHeader from "../components/PageHeader";
+import ConfirmModal from "../components/ConfirmModal";
 
-const normalizeName = value => String(value || "").trim().toLocaleLowerCase("fr");
-const getRayonForItem = (item, ingredientsMap) => item.type === "manual"
-  ? (item.rayon || ingredientsMap[normalizeName(item.baseName || item.name)] || "Extras")
-  : (ingredientsMap[normalizeName(item.baseName)] || "Autres");
+const getItemAisle = (item, ingredientsMap) => {
+  if (item.type === "manual") return item.rayon || "Extras";
+  return ingredientsMap[item.baseName] || "Autres";
+};
 
+// ─────────────────────────────────────────────────────────────
+// Modal : assign an aisle to an unknown ingredient
+// ─────────────────────────────────────────────────────────────
+function AisleModal({ ingredientName, existingAisles, onConfirm, onDismiss }) {
+  const [selected, setSelected] = useState("");
+  const [newAisle, setNewAisle] = useState("");
+  const [mode, setMode] = useState("pick"); // "pick" | "create"
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (mode === "create") inputRef.current?.focus();
+  }, [mode]);
+
+  const handleConfirm = () => {
+    const aisle = mode === "create" ? newAisle.trim() : selected;
+    if (!aisle) return;
+    onConfirm(aisle);
+  };
+
+  const canConfirm = mode === "create" ? newAisle.trim().length > 0 : selected.length > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-33">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+        onClick={onDismiss}
+      />
+
+      <div className="relative w-full max-w-md bg-white dark:bg-[var(--color-card-bg)] rounded-[2.5rem] p-8 shadow-2xl border border-[var(--color-card-border)] animate-fade-in">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle size={14} className="text-[var(--color-accent-ocre)]" strokeWidth={3} />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-app-text)]/40">
+                Rayon inconnu
+              </span>
+            </div>
+            <h3 className="font-display text-xl text-[var(--color-app-text)] leading-tight">
+              Où ranger{" "}
+              <span className="text-[var(--color-accent-ocre)]">«&nbsp;{ingredientName}&nbsp;»</span>&nbsp;?
+            </h3>
+          </div>
+          <button
+            onClick={onDismiss}
+            className="w-10 h-10 rounded-2xl bg-[var(--color-app-text)]/5 flex items-center justify-center text-[var(--color-app-text)]/40 hover:text-[var(--color-app-text)] transition-colors shrink-0 ml-4"
+          >
+            <X size={18} strokeWidth={2.5} />
+          </button>
+        </div>
+
+        {/* Mode toggle */}
+        <div className="flex bg-[var(--color-app-text)]/5 p-1.5 rounded-[2rem] border border-[var(--color-card-border)] shadow-inner mb-6">
+          <button
+            onClick={() => setMode("pick")}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-[1.4rem] transition-all ${
+              mode === "pick"
+                ? "bg-white dark:bg-white/10 text-[var(--color-accent-ocre)] shadow-md"
+                : "text-[#A0A0A0] dark:text-[#505050]"
+            }`}
+          >
+            <Store size={14} strokeWidth={3} /> Existant
+          </button>
+          <button
+            onClick={() => setMode("create")}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-[1.4rem] transition-all ${
+              mode === "create"
+                ? "bg-white dark:bg-white/10 text-[var(--color-accent-ocre)] shadow-md"
+                : "text-[#A0A0A0] dark:text-[#505050]"
+            }`}
+          >
+            <Tag size={14} strokeWidth={3} /> Nouveau
+          </button>
+        </div>
+
+        {/* Content */}
+        {mode === "pick" ? (
+          <div className="flex flex-wrap gap-2 mb-8 max-h-48 overflow-y-auto">
+            {existingAisles.length === 0 ? (
+              <p className="text-[var(--color-app-text)]/40 text-xs italic">
+                Aucun rayon disponible — créez-en un !
+              </p>
+            ) : (
+              existingAisles.map((aisle) => (
+                <button
+                  key={aisle}
+                  onClick={() => setSelected(aisle)}
+                  className={`px-4 py-2 rounded-full text-xs font-black border transition-all ${
+                    selected === aisle
+                      ? "bg-[var(--color-accent-ocre)] text-white border-[var(--color-accent-ocre)]"
+                      : "bg-[var(--color-app-text)]/5 text-[var(--color-app-text)] border-[var(--color-card-border)] hover:bg-[var(--color-app-text)]/10"
+                  }`}
+                >
+                  {aisle}
+                </button>
+              ))
+            )}
+          </div>
+        ) : (
+          <input
+            ref={inputRef}
+            type="text"
+            value={newAisle}
+            onChange={(e) => setNewAisle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && canConfirm && handleConfirm()}
+            placeholder="Ex: Épices, Surgelés…"
+            className="w-full bg-[var(--color-app-text)]/5 border border-[var(--color-card-border)] rounded-[2rem] py-5 px-6 text-xs text-[var(--color-app-text)] outline-none focus:ring-4 focus:ring-[var(--color-accent-ocre)]/5 transition-all shadow-inner mb-8"
+          />
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={onDismiss}
+            className="flex-1 py-5 rounded-[2rem] bg-[var(--color-app-text)]/5 text-[var(--color-app-text)]/60 text-[10px] font-black uppercase tracking-[0.2em] border border-[var(--color-card-border)] active:scale-95 transition-all"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={!canConfirm}
+            className="flex-1 py-5 rounded-[2rem] bg-[var(--color-accent-ocre)] text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none"
+          >
+            Confirmer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Main Cart page
+// ─────────────────────────────────────────────────────────────
 export default function Cart() {
   const [householdRef, setHouseholdRef] = useState(null);
   const [cart, setCart] = useState([]);
@@ -18,20 +153,28 @@ export default function Cart() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState("list");
   const [newItem, setNewItem] = useState("");
-  const [pendingManualItem, setPendingManualItem] = useState("");
-  const [selectedRayon, setSelectedRayon] = useState("");
-  const [newRayon, setNewRayon] = useState("");
   const [showCompleted, setShowCompleted] = useState(false);
 
-  // États pour l'animation de sortie
-  const [animatingItems, setAnimatingItems] = useState([]); // Items rayés (immédiat)
-  const [exitingItems, setExitingItems] = useState([]); // Items en train de glisser/disparaître
+  const [animatingItems, setAnimatingItems] = useState([]);
+  const [exitingItems, setExitingItems] = useState([]);
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+
+  // Aisle modal state
+  const [pendingItem, setPendingItem] = useState(null);
+  // Stable ref so async callbacks always read latest cart
+  const cartRef = useRef(cart);
+  const manualItemSequence = useRef(0);
+
+  useEffect(() => {
+    cartRef.current = cart;
+  }, [cart]);
 
   useEffect(() => {
     let unsubscribe = () => {};
     const setupData = async () => {
       const user = auth.currentUser;
       if (!user) return;
+
       try {
         const ingSnap = await getDocs(collection(db, "ingredients_dict"));
         const map = {};
@@ -40,25 +183,38 @@ export default function Cart() {
           if (data.name) map[data.name.toLowerCase()] = data.rayon || "Autres";
         });
         setIngredientsMap(map);
-      } catch (error) { console.error("Erreur dictionnaire:", error); }
 
-      const userSnap = await getDoc(doc(db, "users", user.uid));
-      if (userSnap.exists() && userSnap.data().householdId) {
-        const ref = doc(db, "households", userSnap.data().householdId);
-        setHouseholdRef(ref);
-        unsubscribe = onSnapshot(ref, (snap) => {
-          if (snap.exists()) {
-            setCart(snap.data().currentCart || []);
-            setMenu(snap.data().currentMenu || []);
-          }
+        const userSnap = await getDoc(doc(db, "users", user.uid));
+        if (userSnap.exists() && userSnap.data().householdId) {
+          const ref = doc(db, "households", userSnap.data().householdId);
+          setHouseholdRef(ref);
+
+          unsubscribe = onSnapshot(ref, (snap) => {
+            if (snap.exists()) {
+              setCart(snap.data().currentCart || []);
+              setMenu(snap.data().currentMenu || []);
+            }
+            setLoading(false);
+          });
+        } else {
           setLoading(false);
-        });
+        }
+      } catch (error) {
+        console.error("Erreur setup Cart:", error);
+        setLoading(false);
       }
     };
     setupData();
     return () => unsubscribe();
   }, []);
 
+  // ── Derived aisle list ──────────────────────────────────────
+  const existingAisles = useMemo(() => {
+    const aisles = new Set(Object.values(ingredientsMap));
+    return [...aisles].sort((a, b) => a.localeCompare(b, "fr"));
+  }, [ingredientsMap]);
+
+  // ── Helpers ─────────────────────────────────────────────────
   const formatQuantity = (qty) => {
     if (!qty) return "";
     const match = String(qty).trim().match(/^([\d.]+)\s*(.*)$/);
@@ -70,242 +226,317 @@ export default function Cart() {
     return `${val} ${unit}`.trim();
   };
 
+  // ── Add manual item ─────────────────────────────────────────
+  const handleAddItem = async (e) => {
+    e.preventDefault();
+    const name = newItem.trim();
+    if (!name || !householdRef) return;
+
+    const baseName = name.toLowerCase();
+    const knownRayon = ingredientsMap[baseName];
+    const existingIds = new Set(cartRef.current.map(item => item.id));
+    let itemId;
+    do {
+      manualItemSequence.current += 1;
+      itemId = `manual_${manualItemSequence.current}`;
+    } while (existingIds.has(itemId));
+
+    const newCartItem = {
+      id: itemId,
+      name,
+      baseName,
+      checked: false,
+      type: 'manual',
+      rayon: knownRayon || null,
+    };
+
+    setNewItem("");
+
+    if (!knownRayon) {
+      setPendingItem(newCartItem);
+    } else {
+      await updateDoc(householdRef, { currentCart: [...cartRef.current, newCartItem] });
+    }
+  };
+
+  // Called when user picks/creates an aisle in the modal
+  const handleAisleConfirmed = async (aisle) => {
+    if (!pendingItem || !householdRef) return;
+
+    const itemWithAisle = { ...pendingItem, rayon: aisle };
+
+    const safeId = pendingItem.baseName
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || `manual-${pendingItem.id}`;
+    const dictRef = doc(db, "ingredients_dict", safeId);
+    await setDoc(dictRef, { name: pendingItem.baseName, rayon: aisle }, { merge: true });
+    await updateDoc(householdRef, { currentCart: [...cartRef.current, itemWithAisle] });
+
+    setIngredientsMap(prev => ({ ...prev, [pendingItem.baseName]: aisle }));
+    setPendingItem(null);
+  };
+
+  const handleAisleDismissed = () => {
+    if (pendingItem) setNewItem(pendingItem.name);
+    setPendingItem(null);
+  };
+
+  // ── Toggle with animation ───────────────────────────────────
   const toggleItemWithAnimation = async (id) => {
-    const item = cart.find(i => i.id === id);
-    if (!item) return;
+    const item = cartRef.current.find(i => i.id === id);
+    if (!item || !householdRef) return;
 
     if (!item.checked) {
-      // 1. PHASE IMMÉDIATE : Griser et rayer
       setAnimatingItems(prev => [...prev, id]);
+      setTimeout(() => setExitingItems(prev => [...prev, id]), 1500);
 
-      // 2. PHASE DISPARITION (après 2 secondes de battement)
-      setTimeout(() => {
-        setExitingItems(prev => [...prev, id]);
-      }, 2000);
-
-      // 3. PHASE FIREBASE (après l'animation de glisse)
       setTimeout(async () => {
-        const updated = cart.map(i => i.id === id ? { ...i, checked: true } : i);
+        const updated = cartRef.current.map(i => i.id === id ? { ...i, checked: true } : i);
         await updateDoc(householdRef, { currentCart: updated });
-        
-        // Nettoyage
         setAnimatingItems(prev => prev.filter(itemId => itemId !== id));
         setExitingItems(prev => prev.filter(itemId => itemId !== id));
-      }, 2600);
+      }, 2000);
     } else {
-      // Décocher depuis le panier : instantané
-      const updated = cart.map(i => i.id === id ? { ...i, checked: false } : i);
+      const updated = cartRef.current.map(i => i.id === id ? { ...i, checked: false } : i);
       await updateDoc(householdRef, { currentCart: updated });
     }
   };
 
-  // Performance : on recalcule les rayons uniquement si le panier change
+  const handleClearCart = async () => {
+    if (householdRef) {
+      await updateDoc(householdRef, { currentCart: [] });
+      setIsClearModalOpen(false);
+    }
+  };
+
+  // ── Derived lists ────────────────────────────────────────────
   const pendingItems = useMemo(() => cart.filter(i => !i.checked), [cart]);
   const completedItems = useMemo(() => cart.filter(i => i.checked), [cart]);
-  const knownRayons = useMemo(() => [...new Set([
-    ...Object.values(ingredientsMap),
-    ...cart.map(item => item.rayon).filter(Boolean)
-  ])].sort((a, b) => a.localeCompare(b, "fr")), [ingredientsMap, cart]);
-
-  const addManualItem = async (name, rayon) => {
-    const normalizedName = normalizeName(name);
-    const item = { id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, name: name.trim(), baseName: normalizedName, checked: false, type: "manual", rayon };
-    const safeId = normalizedName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `manual-${Date.now()}`;
-    await setDoc(doc(db, "ingredients_dict", safeId), { name: normalizedName, rayon });
-    await updateDoc(householdRef, { currentCart: [...cart, item] });
-    setIngredientsMap(previous => ({ ...previous, [normalizedName]: rayon }));
-    setNewItem("");
-    setPendingManualItem("");
-    setNewRayon("");
-    setSelectedRayon("");
-  };
+  const manualPendingItems = useMemo(
+    () => pendingItems.filter(item => item.type === "manual"),
+    [pendingItems]
+  );
 
   const sortedRayons = useMemo(() => {
     const grouped = pendingItems.reduce((acc, item) => {
-      let rayon = getRayonForItem(item, ingredientsMap);
+      const rayon = getItemAisle(item, ingredientsMap);
       if (!acc[rayon]) acc[rayon] = [];
       acc[rayon].push(item);
       return acc;
     }, {});
-    return Object.keys(grouped).sort((a, b) => a === "Extras" ? 1 : b === "Extras" ? -1 : a.localeCompare(b));
+    return Object.keys(grouped).sort((a, b) =>
+      a === "Extras" ? 1 : b === "Extras" ? -1 : a.localeCompare(b)
+    );
   }, [pendingItems, ingredientsMap]);
 
-  if (loading) return <div className="p-6"><SkeletonLoader type="header" /><SkeletonLoader type="cart-item" /></div>;
+  // ── Render ────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="pt-12 px-6 md:px-12 space-y-8 w-full bg-app-bg min-h-screen">
+        <SkeletonLoader type="header" />
+        <SkeletonLoader type="cart-item" />
+      </div>
+    );
+  }
 
   return (
-    <>
+    <div className="flex flex-col min-h-screen pt-4 px-4 md:px-8 pb-48 animate-fade-in bg-app-bg w-full">
       <style>{`
-        .item-row-base {
-          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-          max-height: 100px;
-          opacity: 1;
-        }
-        /* État : vient d'être coché */
-        .is-animating-checked {
-          opacity: 0.4 !important;
-        }
-        .is-animating-checked .ingredient-name {
-          text-decoration: line-through !important;
-        }
-        /* État : en train de sortir de la liste */
-        .is-exiting {
-          transform: translateX(40px);
-          opacity: 0;
-          max-height: 0;
-          padding-top: 0;
-          padding-bottom: 0;
-          margin: 0;
-          border: none;
-          pointer-events: none;
-          overflow: hidden;
-        }
+        .item-row-base { transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); max-height: 120px; opacity: 1; }
+        .is-animating-checked { opacity: 0.4 !important; }
+        .is-animating-checked .ingredient-name { text-decoration: line-through !important; }
+        .is-exiting { transform: translateX(30px); opacity: 0; max-height: 0; padding: 0; margin: 0; overflow: hidden; }
       `}</style>
 
-      <div className="flex flex-col min-h-screen py-24 px-4 pb-40 animate-fade-in">
-        
-        {/* HEADER */}
-        <PageHeader 
-  subtitle={`${pendingItems.length} articles restants`}
-  title="Courses"
-  actionNode={
-    <button 
-      onClick={() => { if(window.confirm("Vider tout le panier ?")) updateDoc(householdRef, { currentCart: [] }) }} 
-      className="w-12 h-12 rounded-2xl glass-panel flex items-center justify-center text-red-500 hover:bg-red-50 transition-colors border border-red-500/10 shadow-sm"
-    >
-      <Trash2 size={20} />
-    </button>
-  }
-/>
+      {/* Aisle assignment modal */}
+      {pendingItem && (
+        <AisleModal
+          ingredientName={pendingItem.name}
+          existingAisles={existingAisles}
+          onConfirm={handleAisleConfirmed}
+          onDismiss={handleAisleDismissed}
+        />
+      )}
 
-        {/* TOGGLE VUE */}
-        <div className="flex bg-forest-deepest/5 p-1 rounded-xl mb-6 shadow-inner transition-colors">
-          <button onClick={() => setViewMode("list")} className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-bold rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-forest-deepest shadow-sm' : 'text-forest-deepest/40'}`}><List size={16} /> Rayons</button>
-          <button onClick={() => setViewMode("recipe")} className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-bold rounded-lg transition-all ${viewMode === 'recipe' ? 'bg-white text-forest-deepest shadow-sm' : 'text-forest-deepest/40'}`}><ChefHat size={16} /> Recettes</button>
+      {/* HEADER */}
+      <header className="mb-6 flex flex-col gap-4 pt-2">
+        <div className="flex justify-between items-end">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="px-2.5 py-0.5 rounded-full bg-[var(--color-accent-ocre)]/10 text-[var(--color-accent-ocre)] text-[10px] font-black uppercase tracking-widest">
+                {pendingItems.length} articles restants
+              </span>
+            </div>
+            {/* h1 géré par CSS global (clamp 28–40px) */}
+            <h1 className="text-[var(--color-app-text)] leading-none">
+              Le Panier
+            </h1>
+          </div>
+
+          {cart.length > 0 && (
+            <button
+              onClick={() => setIsClearModalOpen(true)}
+              className="w-11 h-11 flex items-center justify-center rounded-xl bg-white dark:bg-[var(--color-card-bg)] border border-[var(--color-card-border)] text-red-400 shadow-sm active:scale-95 transition-all"
+            >
+              <Trash2 size={20} />
+            </button>
+          )}
         </div>
 
-        {/* AJOUT MANUEL */}
-        <form onSubmit={async (e) => {
-          e.preventDefault();
-          const name = newItem.trim();
-          if (!name) return;
-          const knownRayon = ingredientsMap[normalizeName(name)];
-          if (knownRayon) await addManualItem(name, knownRayon);
-          else {
-            setPendingManualItem(name);
-            setSelectedRayon(knownRayons[0] || "");
-          }
-        }} className="relative mb-8">
-          <input type="text" value={newItem} onChange={e => setNewItem(e.target.value)} placeholder="Ajouter un article..." className="w-full bg-forest-deepest/5 border border-forest-deepest/10 rounded-2xl py-4 pl-5 pr-14 text-forest-deepest placeholder-forest-deepest/30 outline-none focus:bg-white transition-all shadow-inner" />
-          <button type="submit" className="absolute right-2 top-2 bottom-2 btn-primary p-0 aspect-square rounded-xl"><Plus size={24} /></button>
-        </form>
+        <div className="flex bg-[var(--color-app-text)]/5 p-1.5 rounded-[2rem] border border-[var(--color-card-border)] shadow-inner w-full lg:max-w-md">
+          <button
+            onClick={() => setViewMode("list")}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-[1.4rem] transition-all ${viewMode === 'list' ? 'bg-white dark:bg-white/10 text-[var(--color-accent-ocre)] shadow-md' : 'text-[#A0A0A0] dark:text-[#505050]'}`}
+          >
+            <List size={14} strokeWidth={3} /> Rayons
+          </button>
 
-        <div className="flex flex-col gap-8">
-          {viewMode === "list" ? (
-            sortedRayons.map((rayon) => (
-              <div key={rayon} className="flex flex-col gap-3">
-                <h3 className="font-display font-black text-forest-deepest/40 uppercase tracking-widest text-[11px] flex items-center gap-2 px-2 transition-opacity">
-                  <Store size={14} /> {rayon}
-                </h3>
-                <div className="glass-panel rounded-3xl overflow-hidden divide-y divide-forest-deepest/5 border-none shadow-sm">
-                  {pendingItems.filter(i => getRayonForItem(i, ingredientsMap) === rayon).map(item => (
-                    <div 
-                      key={item.id} 
-                      onClick={() => toggleItemWithAnimation(item.id)} 
-                      className={`cart-row item-row-base ${animatingItems.includes(item.id) ? 'is-animating-checked' : ''} ${exitingItems.includes(item.id) ? 'is-exiting' : ''}`}
-                    >
-                      <div className="flex items-center gap-4 min-w-0 flex-1">
-                        {animatingItems.includes(item.id)
-                          ? <CheckCircle2 className="text-mint-deep shrink-0 animate-fade-in" size={24} />
-                          : <Circle className="text-forest-deepest/20 shrink-0" size={24} />
-                        }
-                        <span className="ingredient-name text-forest-deepest transition-all">
-                          {item.name.split(' (')[0]}
-                        </span>
-                      </div>
-                      {item.name.includes('(') && <span className="badge-qty">{formatQuantity(item.name.split(' (')[1].replace(')', ''))}</span>}
+          <button
+            onClick={() => setViewMode("recipe")}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-[1.4rem] transition-all ${
+              viewMode === 'recipe'
+                ? 'bg-white dark:bg-white/10 text-[var(--color-accent-ocre)] shadow-md'
+                : 'text-[#A0A0A0] dark:text-[#505050]'
+            }`}
+          >
+            <ChefHat size={14} strokeWidth={3} /> Recettes
+          </button>
+        </div>
+      </header>
+
+      {/* INPUT AJOUT */}
+      <form onSubmit={handleAddItem} className="relative mb-8 group max-w-4xl">
+        <input
+          type="text"
+          value={newItem}
+          onChange={e => setNewItem(e.target.value)}
+          placeholder="Un ajout ?"
+          className="w-full bg-white dark:bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-[2.5rem] py-5 px-7 text-xs text-[var(--color-app-text)] outline-none focus:ring-4 focus:ring-[var(--color-accent-ocre)]/5 transition-all shadow-sm"
+        />
+        <button type="submit" className="absolute right-3 top-2.5 bottom-2.5 bg-[var(--color-accent-ocre)] text-white px-3 rounded-[2rem] flex items-center justify-center shadow-lg active:scale-95 transition-transform">
+          <Plus size={22} strokeWidth={3} />
+        </button>
+      </form>
+
+      {/* LISTES */}
+      <div className={`grid gap-8 ${viewMode === "list" ? "grid-cols-1 xl:grid-cols-2" : "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"}`}>
+        {viewMode === "list" ? (
+          sortedRayons.map((rayon) => (
+            <div key={rayon} className="space-y-2 animate-fade-in h-fit">
+              <h3 className="font-display font-bold text-[var(--color-app-text)]/40 text-base flex items-center gap-2.5 px-2">
+                <Store size={13} strokeWidth={3} className="text-[var(--color-accent-ocre)]" /> {rayon}
+              </h3>
+              <div className="bg-white dark:bg-[var(--color-card-bg)] rounded-[1.5rem] overflow-hidden border border-[var(--color-card-border)] shadow-sm divide-y divide-[var(--color-card-border)]">
+                {pendingItems.filter(i => getItemAisle(i, ingredientsMap) === rayon).map(item => (
+                  <div
+                    key={item.id}
+                    onClick={() => toggleItemWithAnimation(item.id)}
+                    className={`flex items-center justify-between p-3.5 cursor-pointer item-row-base hover:bg-gray-50/50 dark:hover:bg-white/5 ${animatingItems.includes(item.id) ? 'is-animating-checked' : ''} ${exitingItems.includes(item.id) ? 'is-exiting' : ''}`}
+                  >
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      {animatingItems.includes(item.id)
+                        ? <CheckCircle2 className="text-[var(--color-accent-ocre)]" size={20} strokeWidth={2.5} />
+                        : <Circle className="text-[var(--color-app-text)]/10" size={20} strokeWidth={2.5} />
+                      }
+                      <span className="ingredient-name text-[var(--color-app-text)] text-xs tracking-tight truncate">
+                        {item.name.split(' (')[0]}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          ) : (
-            /* VUE RECETTE */
-            <>
-            {menu.map(recipe => {
-              const recipePending = recipe.ingredients?.filter(ing => pendingItems.some(p => p.type !== "manual" && p.baseName === normalizeName(ing.name)));
-              if (!recipePending || recipePending.length === 0) return null;
-              return (
-                <div key={recipe.id} className="glass-card shadow-sm border-none">
-                  <h3 className="text-forest-deepest font-bold text-lg mb-4">{recipe.name}</h3>
-                  {recipePending.map((ing, i) => {
-                    const cItem = cart.find(c => c.type !== "manual" && c.baseName === normalizeName(ing.name) && !c.checked);
-                    return (
-                      <div key={i} onClick={() => toggleItemWithAnimation(cItem?.id)} className={`flex justify-between items-center p-2 -mx-2 rounded-xl hover:bg-forest-deepest/5 cursor-pointer ${animatingItems.includes(cItem?.id) ? 'opacity-30 line-through' : ''}`}>
-                        <div className="flex items-center gap-3">
-                          {animatingItems.includes(cItem?.id) ? <CheckCircle2 className="text-mint-deep" size={18}/> : <Circle className="text-forest-deepest/20" size={18}/>}
-                          <span className="text-forest-deepest text-sm font-medium">{ing.name}</span>
-                        </div>
-                        <span className="badge-qty bg-transparent shadow-none opacity-60">{formatQuantity(ing.quantity)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-            {pendingItems.filter(item => item.type === "manual").length > 0 && (
-              <div className="glass-card shadow-sm border-none">
-                <h3 className="text-forest-deepest font-bold text-lg mb-4">Hors recettes</h3>
-                {pendingItems.filter(item => item.type === "manual").map(item => (
-                  <div key={item.id} onClick={() => toggleItemWithAnimation(item.id)} className={`flex items-center gap-3 p-2 -mx-2 rounded-xl hover:bg-forest-deepest/5 cursor-pointer ${animatingItems.includes(item.id) ? 'opacity-30 line-through' : ''}`}>
-                    {animatingItems.includes(item.id) ? <CheckCircle2 className="text-mint-deep" size={18}/> : <Circle className="text-forest-deepest/20" size={18}/>}
-                    <span className="text-forest-deepest text-sm font-medium">{item.name.split(' (')[0]}</span>
+                    {item.name.includes('(') && (
+                      <span className="bg-[var(--color-accent-ocre)]/5 px-3 py-1 rounded-full text-xs font-black text-[var(--color-accent-ocre)] ml-3">
+                        {formatQuantity(item.name.split(' (')[1].replace(')', ''))}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
-            )}
-            </>
-          )}
+            </div>
+          ))
+        ) : (
+          <>
+            {menu.map(recipe => {
+              const recipePending = recipe.ingredients?.filter(ing => pendingItems.some(p => p.type !== "manual" && p.baseName === ing.name.toLowerCase()));
+              if (!recipePending || recipePending.length === 0) return null;
+              return (
+                <div key={recipe.id} className="bg-white dark:bg-[var(--color-card-bg)] p-6 rounded-[2rem] border border-[var(--color-card-border)] shadow-sm animate-fade-in h-fit">
+                  <div className="flex items-center gap-2.5 mb-5">
+                    <span className="w-1 h-5 bg-[var(--color-accent-ocre)] rounded-full"/>
+                    <h3 className="text-[var(--color-app-text)] font-display text-lg tracking-tight">{recipe.name}</h3>
+                  </div>
+                  <div className="space-y-1">
+                    {recipePending.map((ing, i) => {
+                      const cItem = cart.find(c => c.type !== "manual" && !c.checked && c.baseName === ing.name.toLowerCase());
+                      return (
+                        <div key={i} onClick={() => cItem && toggleItemWithAnimation(cItem.id)} className={`flex justify-between items-center p-3 -mx-2 rounded-xl hover:bg-gray-50/50 dark:hover:bg-white/5 cursor-pointer transition-all ${animatingItems.includes(cItem?.id) ? 'opacity-30 line-through' : ''}`}>
+                          <div className="flex items-center gap-4">
+                            {animatingItems.includes(cItem?.id) ? <CheckCircle2 className="text-[var(--color-accent-ocre)]" size={18} /> : <Circle className="text-[var(--color-app-text)]/10" size={18} />}
+                            <span className="text-[var(--color-app-text)]/80 text-xs">{ing.name}</span>
+                          </div>
+                          <span className="text-[var(--color-app-text)]/30 text-[10px] font-black uppercase tracking-widest">{formatQuantity(ing.quantity)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
 
-          {/* PANIER (DÉJÀ COCHÉS) */}
-          {completedItems.length > 0 && (
-            <div className="mt-4 border-t border-forest-deepest/10 pt-6 animate-fade-in">
-              <button 
-                onClick={() => setShowCompleted(!showCompleted)}
-                className="flex items-center justify-between w-full px-2 mb-4 text-forest-deepest/40 hover:text-forest-deepest transition-colors"
-              >
-                <span className="font-display font-black uppercase tracking-widest text-[11px]">Déjà dans le panier ({completedItems.length})</span>
-                {showCompleted ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
-
-              {showCompleted && (
-                <div className="glass-panel rounded-3xl overflow-hidden divide-y divide-forest-deepest/5 opacity-60">
-                  {completedItems.map(item => (
-                    <div key={item.id} onClick={() => toggleItemWithAnimation(item.id)} className="cart-row">
-                      <div className="flex items-center gap-4 min-w-0 flex-1">
-                        <CheckCircle2 className="text-mint-deep shrink-0" size={24} />
-                        <span className="ingredient-name text-forest-deepest line-through">{item.name.split(' (')[0]}</span>
-                      </div>
+            {manualPendingItems.length > 0 && (
+              <div className="bg-white dark:bg-[var(--color-card-bg)] p-6 rounded-[2rem] border border-[var(--color-card-border)] shadow-sm animate-fade-in h-fit">
+                <div className="flex items-center gap-2.5 mb-5">
+                  <span className="w-1 h-5 bg-[var(--color-accent-ocre)] rounded-full" />
+                  <h3 className="text-[var(--color-app-text)] font-display text-lg tracking-tight">Hors recettes</h3>
+                </div>
+                <div className="space-y-1">
+                  {manualPendingItems.map(item => (
+                    <div key={item.id} onClick={() => toggleItemWithAnimation(item.id)} className={`flex items-center gap-4 p-3 -mx-2 rounded-xl hover:bg-gray-50/50 dark:hover:bg-white/5 cursor-pointer transition-all ${animatingItems.includes(item.id) ? 'opacity-30 line-through' : ''}`}>
+                      {animatingItems.includes(item.id) ? <CheckCircle2 className="text-[var(--color-accent-ocre)]" size={18} /> : <Circle className="text-[var(--color-app-text)]/10" size={18} />}
+                      <span className="text-[var(--color-app-text)]/80 text-xs">{item.name.split(" (")[0]}</span>
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* SECTION DÉJÀ PRIS */}
+      {completedItems.length > 0 && (
+        <div className="mt-16 pt-6 border-t border-[var(--color-card-border)]">
+          <button
+            onClick={() => setShowCompleted(!showCompleted)}
+            className="flex items-center justify-between w-full max-w-4xl px-6 py-4 bg-[var(--color-app-text)]/5 rounded-2xl text-[var(--color-app-text)]/30 hover:text-[var(--color-app-text)]/50 transition-all border border-transparent hover:border-[var(--color-card-border)]"
+          >
+            <span className="font-black uppercase tracking-[0.2em] text-[11px]">Déjà acheté ({completedItems.length})</span>
+            {showCompleted ? <ChevronUp size={16} strokeWidth={3} /> : <ChevronDown size={16} strokeWidth={3} />}
+          </button>
+
+          {showCompleted && (
+            <div className={`mt-6 grid gap-3 max-w-6xl ${completedItems.length > 4 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+              {completedItems.map(item => (
+                <div key={item.id} onClick={() => toggleItemWithAnimation(item.id)} className="bg-white dark:bg-[var(--color-card-bg)]/40 flex items-center gap-4 p-4 rounded-2xl border border-[var(--color-card-border)] opacity-60 cursor-pointer">
+                  <CheckCircle2 className="text-[var(--color-accent-ocre)] shrink-0" size={20} strokeWidth={2.5} />
+                  <span className="text-[var(--color-app-text)] line-through font-medium text-xs truncate italic">{item.name.split(' (')[0]}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>
-      </div>
-      {pendingManualItem && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="manual-rayon-title">
-          <div className="glass-card w-full max-w-md p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4 mb-2">
-              <div><h2 id="manual-rayon-title" className="text-xl font-black text-forest-deepest">Quel rayon pour cet article ?</h2><p className="text-sm text-forest-deepest/60 mt-1">« {pendingManualItem} » sera classé ici et mémorisé.</p></div>
-              <button type="button" onClick={() => setPendingManualItem("")} className="p-2 rounded-xl hover:bg-forest-deepest/5" aria-label="Fermer"><X size={20}/></button>
-            </div>
-            {knownRayons.length > 0 && <label className="block text-sm font-bold mt-5 mb-2">Rayons connus<select value={selectedRayon} onChange={e => { setSelectedRayon(e.target.value); setNewRayon(""); }} className="w-full mt-2 bg-white border border-forest-deepest/10 rounded-xl p-3 font-medium">{knownRayons.map(rayon => <option key={rayon} value={rayon}>{rayon}</option>)}</select></label>}
-            <label className="block text-sm font-bold mt-4 mb-2">Proposer un nouveau rayon<input value={newRayon} onChange={e => setNewRayon(e.target.value)} onFocus={() => setSelectedRayon("")} placeholder="Ex. Épicerie" className="w-full mt-2 bg-white border border-forest-deepest/10 rounded-xl p-3 font-medium outline-none focus:border-mint-deep" /></label>
-            <button type="button" disabled={!newRayon.trim() && !selectedRayon} onClick={() => addManualItem(pendingManualItem, newRayon.trim() || selectedRayon)} className="btn-primary w-full py-3 rounded-xl mt-4 disabled:opacity-40">Ajouter au panier</button>
-          </div>
-        </div>
       )}
-    </>
+
+      {/* MODAL DE CONFIRMATION */}
+      <ConfirmModal
+        isOpen={isClearModalOpen}
+        onClose={() => setIsClearModalOpen(false)}
+        onConfirm={handleClearCart}
+        title="Vider le panier ?"
+        message="Cette action supprimera tous les articles de votre liste de courses actuelle. Vous ne pourrez pas revenir en arrière."
+        confirmText="Vider tout"
+        variant="danger"
+      />
+    </div>
   );
 }

@@ -1,35 +1,18 @@
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useState, useMemo } from "react";
 import { auth, db } from "../lib/firebase";
 import { doc, getDoc, updateDoc, collection, getDocs, onSnapshot } from "firebase/firestore";
-import { 
-  RefreshCw, ChefHat, Trash2, CheckCircle2, Utensils, ExternalLink, 
-  X, Clock, Beef, Drumstick, Fish, Leaf, Check,
-  Minus, Plus, Wheat, Milk, BottleWine, Ham
+import {
+  RefreshCw, CalendarDays, Trash2,
+  ExternalLink, ArrowRight, SlidersHorizontal, X, Users, UtensilsCrossed,
+  Check, ShoppingBasket, Clock3, ChevronDown, ShieldAlert,
+  ChefHat, Drumstick, Beef, Fish, Leaf, Zap, ShoppingCart, CheckCheck
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import SkeletonLoader from "../components/SkeletonLoader";
-import PageHeader from "../components/PageHeader";
+import ConfirmModal from "../components/ConfirmModal";
 
-// Icône SVG personnalisée pour la Cacahuète (imitant le style Lucide-react)
-const PeanutIcon = ({ size = 24, className = "" }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <path d="M14.6 9.4A5.5 5.5 0 0 0 8 5 5 5 0 0 0 3.3 9.4c-.6.9-.9 2.5-.2 4a5 5 0 0 0 4.7 3.6 5.5 5.5 0 0 0 6.6 4.4 5 5 0 0 0 4.7-3.6c.7-1.5.4-3.1-.2-4a5.5 5.5 0 0 0-4.3-4.4z"/>
-    <path d="M12 12c.5-.5 1-1 2-1" />
-    <path d="M9 13c-.5.5-1 1-2 1" />
-  </svg>
-);
+const MotionDiv = motion.div;
 
 export default function Menu() {
   const navigate = useNavigate();
@@ -41,74 +24,94 @@ export default function Menu() {
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
-  
-  // --- ÉTATS POUR LES FILTRES DU MENU ---
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [recipeCount, setRecipeCount] = useState(7);
-  const [filterExpress, setFilterExpress] = useState(false);
-  const [filterProteins, setFilterProteins] = useState([]);
-  const [filterTags, setFilterTags] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
 
-  // --- ÉTAT POUR L'ACCORDÉON DES COURSES ---
-  const [expandedRecipeIndex, setExpandedRecipeIndex] = useState(null);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [isRegenModalOpen, setIsRegenModalOpen] = useState(false);
+  const [missingPopoverIndex, setMissingPopoverIndex] = useState(-1);
+
+  const [constraints, setConstraints] = useState({
+    allergens: [],
+    protein: "all",
+    quickMode: false,
+    mealCount: 7,
+    servings: 2
+  });
+
+  const ALLERGENS_LIST = ["Gluten", "Lactose", "Fruits à coque", "Arachides", "Œufs", "Poisson"];
+
+  const PROTEINS_LIST = [
+    { id: "all", label: "Omnivore", icon: ChefHat },
+    { id: "poulet", label: "Poulet", icon: Drumstick },
+    { id: "bœuf", label: "Bœuf", icon: Beef },
+    { id: "poisson", label: "Poisson", icon: Fish },
+    { id: "végétarien", label: "Végé", icon: Leaf }
+  ];
+
+  const filteredRecipes = useMemo(() => {
+    return allRecipes.filter(r => {
+      const matchProtein = constraints.protein === "all" || r.protein?.toLowerCase() === constraints.protein;
+      const recipeTime = parseInt(r.time) || 0;
+      const matchQuick = !constraints.quickMode || recipeTime <= 30;
+      const hasAllergen = r.allergens?.some(a => constraints.allergens.includes(a));
+      return matchProtein && matchQuick && !hasAllergen;
+    });
+  }, [allRecipes, constraints]);
+
+  const filteredRecipesCount = filteredRecipes.length;
 
   useEffect(() => {
     let unsubscribe = () => {};
     const initData = async () => {
       const user = auth.currentUser;
-      if (!user) { navigate("/login"); return; }
-      
+      if (!user) return;
       try {
         const recipesSnap = await getDocs(collection(db, "recipes"));
         setAllRecipes(recipesSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-        
         const userSnap = await getDoc(doc(db, "users", user.uid));
-        if (userSnap.exists()) {
-          const uData = userSnap.data();
-          if (uData.householdId) {
-            setHouseholdId(uData.householdId);
-            unsubscribe = onSnapshot(doc(db, "households", uData.householdId), (docSnap) => {
-              if (docSnap.exists()) {
-                const data = docSnap.data();
-                setMenu(data.currentMenu || []);
-                setIsValidated(data.isMenuValidated || false);
-                setCart(data.currentCart || []);
-              }
-              setLoading(false);
-            });
-          } else {
+        if (userSnap.exists() && userSnap.data().householdId) {
+          const hId = userSnap.data().householdId;
+          setHouseholdId(hId);
+          unsubscribe = onSnapshot(doc(db, "households", hId), (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              setMenu(data.currentMenu || []);
+              setCart(data.currentCart || []);
+              setIsValidated(data.isMenuValidated || false);
+              if (data.constraints) setConstraints(data.constraints);
+            }
             setLoading(false);
-          }
+          });
         }
       } catch (error) { console.error(error); setLoading(false); }
     };
     initData();
     return () => unsubscribe();
-  }, [navigate]);
+  }, []);
+
+  const adjustQuantity = (rawQty, servings) => {
+    if (!rawQty) return "";
+    const ratio = servings / 2;
+    const match = String(rawQty).match(/^([\d.]+)\s*(.*)$/);
+    if (!match) return rawQty;
+    const val = parseFloat(match[1]);
+    const unit = match[2] || "";
+    return `${Math.round((val * ratio) * 100) / 100} ${unit}`.trim();
+  };
 
   const aggregateQuantities = (quantities) => {
-    if (!quantities || quantities.length === 0) return "";
     const sums = {};
     const unparseable = [];
-    const invariables = ['g', 'kg', 'cl', 'ml', 'l', 'cas', 'cac'];
-
-    quantities.forEach(rawQ => {
-      const q = String(rawQ).toLowerCase().trim();
-      let match = q.match(/^([\d.]+)\s*(.*)$/);
+    quantities.forEach(q => {
+      const match = String(q).match(/^([\d.]+)\s*(.*)$/);
       if (match) {
         const val = parseFloat(match[1]);
-        let unit = match[2] ? match[2].trim() : "pc";
-        if (unit.endsWith('s') && !['cas', 'cac'].includes(unit)) unit = unit.slice(0, -1);
+        const unit = (match[2] || "pc").trim();
         sums[unit] = (sums[unit] || 0) + val;
-      } else { unparseable.push(rawQ); }
+      } else { unparseable.push(q); }
     });
-
-    const parts = Object.entries(sums).map(([unit, val]) => {
-      const rounded = Math.round(val * 100) / 100;
-      let displayUnit = (rounded > 1 && !invariables.includes(unit)) ? unit + "s" : unit;
-      return `${rounded} ${displayUnit}`.trim();
-    });
-    return parts.length || unparseable.length ? ` (${[...parts, ...unparseable].join(' + ')})` : "";
+    const parts = Object.entries(sums).map(([unit, val]) => `${Math.round(val * 100) / 100} ${unit}`);
+    return parts.length ? ` (${[...parts, ...unparseable].join(' + ')})` : "";
   };
 
   const syncMenuAndCart = async (newMenu, options = {}) => {
@@ -118,19 +121,17 @@ export default function Menu() {
     try {
       const houseSnap = await getDoc(doc(db, "households", householdId));
       const currentCart = houseSnap.data()?.currentCart || [];
-      
-      const manualItems = markValidated ? [] : currentCart.filter(item => item.type !== 'menu');
+      const manualItems = currentCart.filter(item => item.type !== 'menu');
       const oldMenuItems = currentCart.filter(item => item.type === 'menu');
-
       const ingMap = {};
       newMenu.forEach(recipe => {
         recipe.ingredients?.forEach(ing => {
           const key = ing.name.trim().toLowerCase();
           if (!ingMap[key]) ingMap[key] = { name: ing.name.trim(), quantities: [] };
-          if (ing.quantity) ingMap[key].quantities.push(ing.quantity);
+          const adjusted = adjustQuantity(ing.quantity, constraints.servings);
+          if (adjusted) ingMap[key].quantities.push(adjusted);
         });
       });
-
       const newMenuItems = Object.values(ingMap).map(item => ({
         id: 'menu_' + item.name.toLowerCase().replace(/[^a-z0-9]/g, '_'),
         name: `${item.name}${aggregateQuantities(item.quantities)}`,
@@ -138,438 +139,400 @@ export default function Menu() {
         checked: false,
         type: 'menu'
       }));
-
-      const mergedMenuItems = markValidated 
-        ? newMenuItems 
-        : newMenuItems.map(newItem => {
-            const existing = oldMenuItems.find(old => old.baseName === newItem.baseName);
-            return existing ? { ...newItem, checked: existing.checked } : newItem;
-          });
-
-      const payload = { 
-        currentMenu: newMenu, 
-        currentCart: [...manualItems, ...mergedMenuItems] 
+      const mergedMenuItems = newMenuItems.map(newItem => {
+        const existing = oldMenuItems.find(old => old.baseName === newItem.baseName);
+        return existing ? { ...newItem, checked: existing.checked } : newItem;
+      });
+      const payload = {
+        currentMenu: newMenu,
+        currentCart: [...manualItems, ...mergedMenuItems],
+        constraints: constraints,
+        isMenuValidated: markValidated ? true : isValidated
       };
-      
-      if (markValidated) payload.isMenuValidated = true;
-      
       await updateDoc(doc(db, "households", householdId), payload);
       if (redirect) navigate("/cart");
     } finally { setIsValidating(false); }
   };
 
-  const availableRecipes = allRecipes?.filter(recipe => {
-    if (filterExpress && parseInt(recipe.time || 999) > 30) return false;
-    
-    if (filterProteins.length > 0) {
-      const recProt = recipe.protein?.toLowerCase() || "autre";
-      if (!filterProteins.includes(recProt)) return false;
-    }
-    
-    const tags = recipe.tags?.map(t => t.toLowerCase().trim()) || [];
-    const ingredientsStr = JSON.stringify(recipe.ingredients || "").toLowerCase();
-
-    for (const tag of filterTags) {
-      if (tag === "végé" && !tags.includes("végé")) return false;
-      if (tag === "sans gluten" && !tags.includes("sans gluten")) return false;
-      if (tag === "sans lactose" && !tags.includes("sans lactose")) return false;
-      if (tag === "sans sauce soja" && ingredientsStr.includes("sauce soja")) return false;
-      
-      if (tag === "sans fruits à coque") {
-        if (
-          ingredientsStr.includes("cacahuète") ||
-          ingredientsStr.includes("cacahuete") ||
-          ingredientsStr.includes("amande") ||
-          ingredientsStr.includes("noisette") ||
-          ingredientsStr.includes("noix")
-        ) {
-          return false;
-        }
-      }
-    }
-    
-    return true;
-  }) || [];
-
-  const handleGenerateFilteredMenu = async () => {
-    if (availableRecipes.length === 0 || !householdId) return;
-    setIsGenerating(true); 
-    
+  const generateMenu = async () => {
+    if (!householdId || allRecipes.length === 0) return;
+    setIsGenerating(true);
     try {
-      const shuffled = [...availableRecipes].sort(() => 0.5 - Math.random());
-      const selectedRecipes = shuffled.slice(0, Math.min(recipeCount, availableRecipes.length));
-
+      const shuffled = [...filteredRecipes].sort(() => 0.5 - Math.random());
+      const selectedRecipes = shuffled.slice(0, constraints.mealCount).map(r => ({...r, cooked: false}));
       await updateDoc(doc(db, "households", householdId), {
         currentMenu: selectedRecipes,
         isMenuValidated: false,
-        currentCart: [] 
+        constraints: constraints
       });
+    } finally { setIsGenerating(false); }
+  };
 
-      setIsFilterModalOpen(false);
-    } catch (error) {
-      console.error("Erreur de génération :", error);
-    } finally {
-      setIsGenerating(false);
+  const handleResetMenu = async () => {
+    if (householdId) {
+      await updateDoc(doc(db, "households", householdId), { isMenuValidated: false });
     }
   };
 
-  const toggleProtein = (prot) => {
-    setFilterProteins(prev => 
-      prev.includes(prot) ? prev.filter(p => p !== prot) : [...prev, prot]
-    );
-  };
-
-  const toggleDietTag = (tagId) => {
-    if (tagId === "") { setFilterTags([]); return; }
-    setFilterTags(prev => 
-      prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]
-    );
-  };
-
-  const swapRecipe = (index) => {
-    const currentIds = menu.map(r => r.id);
-    const available = availableRecipes.filter(r => !currentIds.includes(r.id));
-    if (available.length === 0) {
-      alert("Aucune autre recette ne correspond à vos filtres actuels.");
-      return;
-    }
-    const newMenu = [...menu];
-    newMenu[index] = available[Math.floor(Math.random() * available.length)];
-    syncMenuAndCart(newMenu);
-  };
-
-  // NOUVEAU : On récupère plus de détails pour le statut (nombre restants et détails)
   const getRecipeDetails = (recipe) => {
     if (!isValidated || !recipe.ingredients || recipe.ingredients.length === 0) return { status: null };
     const ings = recipe.ingredients.map(i => i.name.trim().toLowerCase());
     const relevantCart = cart.filter(i => ings.includes(i.baseName) && i.type === 'menu');
-    
     if (relevantCart.length === 0) return { status: null };
-    
     const missingItems = relevantCart.filter(i => !i.checked);
-    const missingCount = missingItems.length;
-    
     return {
-      status: missingCount === 0 ? 'ready' : 'missing',
-      missingCount,
+      status: missingItems.length === 0 ? 'ready' : 'missing',
+      missingCount: missingItems.length,
       missingItems
     };
   };
 
-  const getProteinIcon = (protein) => {
-  const p = protein?.toLowerCase().trim();
-  if (p === 'poulet') return <Drumstick size={12} />;
-  if (p === 'bœuf' || p === 'boeuf') return <Beef size={12} />;
-  if (p === 'poisson') return <Fish size={12} />;
-  if (p === 'porc') return <Ham size={12} />;
-  if (p === 'végétarien' || p === 'végé') return <Leaf size={12} />;
-  return <ChefHat size={12} />; // Icône par défaut
-};
-
-  if (loading) return <div className="p-6 pt-24"><SkeletonLoader type="header" />{[...Array(4)].map((_, i) => <SkeletonLoader key={i} type="recipe-card" />)}</div>;
+  if (loading) return <div className="p-6 w-full min-h-screen bg-app-bg"><SkeletonLoader type="header" /></div>;
 
   return (
-    <div className="flex flex-col min-h-screen pt-24 px-4 pb-36 animate-fade-in w-full max-w-4xl mx-auto">
-      
-      <PageHeader 
-        subtitle={menu.length > 0 ? (isValidated ? "Menu validé" : "Brouillon en cours") : "Cette semaine"}
-        title="Menu Hebdo"
-        actionNode={
-          menu.length > 0 && (
-            <button 
-              onClick={() => setIsFilterModalOpen(true)}
-              className="w-12 h-12 rounded-2xl glass-panel flex items-center justify-center text-forest-deepest border border-forest-deepest/10 shadow-sm transition-transform active:scale-90"
-            >
-              <RefreshCw size={20} className={isGenerating ? "animate-spin" : ""} />
-            </button>
-          )
-        }
-      />
+    <div className="flex flex-col min-h-screen pt-3 px-4 md:px-8 pb-32 transition-all bg-app-bg">
 
-      {menu.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center -mt-10 px-4 text-center">
-          <div className="w-24 h-24 rounded-full glass-panel flex items-center justify-center text-forest-deepest/40 mb-6 shadow-xl">
-            <ChefHat size={40} />
+      {/* ── HEADER ── */}
+      <header className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="px-2.5 py-0.5 rounded-full bg-[var(--color-accent-ocre)]/10 text-[var(--color-accent-ocre)] text-[10px] font-black uppercase tracking-widest">
+              {constraints.servings} Pers. / {constraints.mealCount} Repas
+            </span>
           </div>
-          <h2 className="font-display font-black text-xl text-forest-deepest mb-3 text-center">Planifiez votre semaine</h2>
-          <p className="text-forest-deepest/70 text-sm mb-10 leading-relaxed text-center">
-            Configurez vos préférences pour générer votre menu de la semaine.
-          </p>
-          <button 
-            onClick={() => setIsFilterModalOpen(true)} 
-            disabled={isGenerating || allRecipes.length === 0} 
-            className="btn-primary w-full max-w-xs"
-          >
-            {isGenerating ? <RefreshCw className="animate-spin" size={20} /> : <ChefHat size={20} />}
-            Générer mon menu
-          </button>
+          {/* h1 géré par le CSS global (clamp 28–40px) */}
+          <h1 className="text-[var(--color-app-text)] leading-none">
+            {isValidated ? "Le Menu" : "La Carte"}
+          </h1>
         </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {menu.map((recipe, index) => {
-            const details = getRecipeDetails(recipe);
-            const isExpanded = expandedRecipeIndex === index;
 
-            return (
-              <div 
-                key={index} 
-                className={`glass-card relative overflow-hidden group transition-all duration-300 ${
-                  details.status === 'missing' ? 'cursor-pointer hover:bg-white/60' : ''
-                }`}
-                onClick={() => {
-                  // On ouvre le tiroir que si le menu est validé et qu'il manque des courses
-                  if (details.status === 'missing') {
-                    setExpandedRecipeIndex(isExpanded ? null : index);
-                  }
-                }}
+        <div className="flex items-center gap-3">
+          {!isValidated ? (
+            <>
+              <button
+                onClick={() => setShowFilters(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-[var(--color-card-bg)] border border-[var(--color-card-border)] text-[var(--color-app-text)] text-sm font-bold shadow-sm active:scale-95 transition-all"
               >
-                {details.status === 'ready' && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-mint-deep shadow-[2px_0_10px_rgba(16,185,129,0.3)]" />}
-                
-                <div className="flex justify-between items-start gap-4">
-                  <div className="min-w-0 flex-1 pl-1">
-                    {/* MODIFICATION : Suppression de 'truncate' et ajustement pour multilignes */}
-                    <h3 className="text-forest-deepest font-bold text-lg leading-tight">{recipe.name}</h3>
-                    
-                    <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      {recipe.protein && recipe.protein.toLowerCase() !== 'autre' && (
-  <span className="badge flex items-center gap-1.5">
-    {getProteinIcon(recipe.protein)}
-    {recipe.protein}
-  </span>
-)}
-                      
-                      {recipe.tags && recipe.tags.map((t, idx) => (
-                        <span key={idx} className="text-[9px] font-bold text-forest-deepest/40 bg-forest-deepest/5 px-2 py-0.5 rounded-full uppercase tracking-widest border border-forest-deepest/5">
-                          #{t}
-                        </span>
-                      ))}
+                <SlidersHorizontal size={16} /> Configurer
+              </button>
+              <button
+                onClick={() => menu.length > 0 ? setIsRegenModalOpen(true) : generateMenu()}
+                className="w-11 h-11 flex items-center justify-center rounded-xl bg-[var(--color-accent-ocre)] text-white shadow-lg hover:rotate-180 transition-all duration-700"
+              >
+                <RefreshCw size={20} className={isGenerating ? "animate-spin" : ""} />
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setIsResetModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-[var(--color-card-bg)] border border-[var(--color-card-border)] text-[var(--color-app-text)] text-sm font-bold shadow-sm active:scale-95 transition-all"
+            >
+              <CalendarDays size={16} /> Nouveau Menu
+            </button>
+          )}
+        </div>
+      </header>
 
-                      {details.status && (
-                        <span className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                          details.status === 'ready' 
-                            ? 'bg-mint-deep/15 text-mint-deep'
-                            : 'bg-orange-500/15 text-orange-600'
-                        }`}>
-                          {/* MODIFICATION : Affichage du compte précis */}
-                          {details.status === 'ready' ? '● Prêt' : `○ Courses (${details.missingCount} restant${details.missingCount > 1 ? 's' : ''})`}
-                        </span>
-                      )}
+      {/* ── CONFIGURATEUR ── */}
+      <AnimatePresence>
+        {showFilters && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl">
+            <MotionDiv
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              className="bg-white dark:bg-[var(--color-card-bg)] w-full max-w-lg rounded-[2rem] p-6 md:p-8 shadow-2xl border border-[var(--color-card-border)] flex flex-col max-h-[90vh]"
+            >
+              {/* Modal header */}
+              <div className="flex justify-between items-center mb-6 shrink-0">
+                <h2 className="font-display text-2xl text-[var(--color-app-text)]">Configuration</h2>
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="p-2 rounded-full bg-gray-100 dark:bg-white/5 text-[var(--color-app-text)]"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto pr-1 space-y-7 scrollbar-hide">
+
+                {/* Taille tablée + nb repas */}
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <label className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-app-text)]/40 mb-3">
+                      <Users size={12} /> Tablée
+                    </label>
+                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 p-1.5 rounded-xl border border-[var(--color-card-border)]">
+                      <button
+                        onClick={() => setConstraints({...constraints, servings: Math.max(1, constraints.servings - 1)})}
+                        className="w-9 h-9 rounded-lg bg-white dark:bg-white/10 flex items-center justify-center text-base font-bold"
+                      >-</button>
+                      <span className="flex-1 text-center font-display text-lg">{constraints.servings} pers.</span>
+                      <button
+                        onClick={() => setConstraints({...constraints, servings: constraints.servings + 1})}
+                        className="w-9 h-9 rounded-lg bg-white dark:bg-white/10 flex items-center justify-center text-base font-bold"
+                      >+</button>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0 pt-1">
-                    {/* MODIFICATION : Lien PDF toujours présent, avec stopPropagation pour ne pas déclencher le clic de la carte */}
-                    {recipe.pdfLink && (
-                      <a href={recipe.pdfLink} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="btn-ghost" title="Voir la recette">
-                        <ExternalLink size={16}/>
-                      </a>
-                    )}
-                    
-                    {!isValidated ? (
-                      <>
-                        <button onClick={(e) => { e.stopPropagation(); swapRecipe(index); }} className="btn-ghost" title="Changer cette recette">
-                          <RefreshCw size={16} />
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); syncMenuAndCart(menu.filter((_, i) => i !== index)); }} className="p-2.5 rounded-full text-red-400 hover:text-red-500 hover:bg-red-50 transition-colors">
-                          <Trash2 size={16} />
-                        </button>
-                      </>
-                    ) : (
-                      <button onClick={(e) => { e.stopPropagation(); syncMenuAndCart(menu.filter((_, i) => i !== index)); }} className="p-2.5 rounded-full text-mint-deep hover:text-forest-deepest hover:bg-mint transition-colors">
-                        <Utensils size={16}/>
-                      </button>
-                    )}
+                  <div>
+                    <label className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-app-text)]/40 mb-3">
+                      <UtensilsCrossed size={12} /> Repas
+                    </label>
+                    <div className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 p-1.5 rounded-xl border border-[var(--color-card-border)]">
+                      <button
+                        onClick={() => setConstraints({...constraints, mealCount: Math.max(1, constraints.mealCount - 1)})}
+                        className="w-9 h-9 rounded-lg bg-white dark:bg-white/10 flex items-center justify-center text-base font-bold"
+                      >-</button>
+                      <span className="flex-1 text-center font-display text-lg">{constraints.mealCount}</span>
+                      <button
+                        onClick={() => setConstraints({...constraints, mealCount: constraints.mealCount + 1})}
+                        className="w-9 h-9 rounded-lg bg-white dark:bg-white/10 flex items-center justify-center text-base font-bold"
+                      >+</button>
+                    </div>
                   </div>
                 </div>
 
-                {/* MODIFICATION : Accordéon d'ingrédients manquants */}
-                {details.status === 'missing' && isExpanded && (
-                  <div className="mt-4 pt-3 border-t border-forest-deepest/5 animate-fade-in" onClick={e => e.stopPropagation()}>
-                    <p className="text-[10px] font-black text-forest-deepest/40 uppercase tracking-widest mb-2 pl-1">À acheter :</p>
-                    <ul className="flex flex-col gap-1.5 pl-1">
-                      {details.missingItems.map(item => (
-                        <li key={item.id} className="text-xs font-medium text-forest-deepest/80 flex items-start gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1.5 shrink-0" />
-                          <span className="leading-tight">{item.name}</span>
-                        </li>
+                {/* Protéine */}
+                <div>
+                  <label className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-app-text)]/40 mb-3">
+                    Protéine
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {PROTEINS_LIST.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setConstraints({...constraints, protein: p.id})}
+                        className={`flex items-center justify-center gap-2 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                          constraints.protein === p.id
+                            ? 'bg-[var(--color-accent-ocre)] text-white border-transparent shadow-md'
+                            : 'bg-gray-100 dark:bg-white/5 text-[var(--color-app-text)] border-[var(--color-card-border)]'
+                        }`}
+                      >
+                        <p.icon size={14} />
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Temps + Allergènes */}
+                <div className="space-y-5">
+                  <div>
+                    <label className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-app-text)]/40 mb-3">
+                      <Zap size={12} /> Préparation
+                    </label>
+                    <button
+                      onClick={() => setConstraints({...constraints, quickMode: !constraints.quickMode})}
+                      className={`w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.15em] transition-all border flex items-center justify-center gap-2 ${
+                        constraints.quickMode
+                          ? 'bg-amber-400 text-black border-transparent shadow-md'
+                          : 'bg-gray-100 dark:bg-white/5 text-[var(--color-app-text)]/40 border-[var(--color-card-border)]'
+                      }`}
+                    >
+                      <Zap size={13} fill={constraints.quickMode ? "currentColor" : "none"} />
+                      Prêt en moins de 30 min
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--color-app-text)]/40 mb-3">
+                      <ShieldAlert size={12} /> Allergènes à exclure
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {ALLERGENS_LIST.map((allergen) => (
+                        <button
+                          key={allergen}
+                          onClick={() => setConstraints(prev => ({
+                            ...prev,
+                            allergens: prev.allergens.includes(allergen)
+                              ? prev.allergens.filter(a => a !== allergen)
+                              : [...prev.allergens, allergen]
+                          }))}
+                          className={`px-3 py-2 rounded-full text-[9px] font-black uppercase tracking-tighter transition-all border ${
+                            constraints.allergens.includes(allergen)
+                              ? 'bg-red-500 text-white border-transparent'
+                              : 'bg-gray-100 dark:bg-white/5 text-[var(--color-app-text)]/60 border-[var(--color-card-border)]'
+                          }`}
+                        >
+                          {allergen}
+                        </button>
                       ))}
-                    </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <button
+                onClick={() => { setShowFilters(false); generateMenu(); }}
+                disabled={filteredRecipesCount === 0}
+                className="btn-primary w-full mt-6 shrink-0"
+              >
+                Appliquer & Générer
+                <ArrowRight size={16} />
+                <span className="text-[10px] font-black uppercase tracking-[0.15em] opacity-60 ml-1">
+                  ({filteredRecipesCount} recettes)
+                </span>
+              </button>
+            </MotionDiv>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── GRILLE RECETTES ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {menu.map((recipe, index) => {
+          const details = getRecipeDetails(recipe);
+          const isPopoverOpen = missingPopoverIndex === index;
+
+          return (
+            <MotionDiv
+              layout
+              key={recipe.id || index}
+              className={`relative bg-white dark:bg-[var(--color-card-bg)] border rounded-2xl p-5 flex flex-col shadow-sm transition-all ${
+                recipe.cooked ? 'opacity-40 grayscale scale-[0.98]' : 'border-[var(--color-card-border)]'
+              }`}
+            >
+              <div className="mb-4">
+                <div className="flex justify-between items-start mb-1">
+                  <span className="text-[10px] font-black text-[var(--color-accent-ocre)] uppercase tracking-widest">
+                    {recipe.protein}
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-[var(--color-app-text)]/30 uppercase tracking-widest">
+                    <Clock3 size={11} /> {recipe.time || "--"}
+                  </span>
+                </div>
+                {/* h3 géré par CSS global (~16–20px) */}
+                <h3 className="mt-1 leading-snug">{recipe.name}</h3>
+
+                {details.status && (
+                  <div className="relative mt-2.5">
+                    {details.status === 'ready' ? (
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-green-100 text-green-600">
+                        <CheckCheck size={11} /> Prêt à cuisiner
+                      </span>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setMissingPopoverIndex(isPopoverOpen ? -1 : index)}
+                          className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-orange-100 text-orange-600 hover:bg-orange-200 active:scale-95 transition-all cursor-pointer"
+                        >
+                          <ShoppingCart size={11} />
+                          {details.missingCount} ingrédient{details.missingCount > 1 ? 's' : ''} manquant{details.missingCount > 1 ? 's' : ''}
+                        </button>
+                        {isPopoverOpen && (
+                          <div className="absolute top-full left-0 mt-1.5 z-50 bg-white dark:bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-xl p-3 shadow-2xl min-w-[180px] max-w-[240px]">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-app-text)]/40">À acheter</p>
+                              <button onClick={() => setMissingPopoverIndex(-1)} className="text-[var(--color-app-text)]/30 hover:text-[var(--color-app-text)] transition-colors">
+                                <X size={12} />
+                              </button>
+                            </div>
+                            <ul className="flex flex-col gap-1.5">
+                              {details.missingItems.map(item => (
+                                <li key={item.id} className="flex items-start gap-2 text-[11px] font-medium text-[var(--color-app-text)]/80">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1 shrink-0" />
+                                  <span className="leading-tight">{item.name}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
               </div>
-            );
-          })}
-        </div>
-      )}
 
+              <div className="mt-auto flex items-center gap-2">
+                {!isValidated ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        const available = filteredRecipes.filter(r => !menu.find(m => m.id === r.id));
+                        if (available.length > 0) {
+                          const newMenu = [...menu];
+                          newMenu[index] = available[Math.floor(Math.random() * available.length)];
+                          syncMenuAndCart(newMenu);
+                        }
+                      }}
+                      className="p-3 rounded-xl bg-app-bg text-[var(--color-app-text)]/40 border border-[var(--color-card-border)] hover:text-[var(--color-accent-ocre)] transition-colors"
+                    >
+                      <RefreshCw size={16} />
+                    </button>
+                    <button
+                      onClick={() => { const n = [...menu]; n.splice(index, 1); syncMenuAndCart(n); }}
+                      className="p-3 rounded-xl bg-red-50 text-red-400 border border-transparent hover:bg-red-500 hover:text-white transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {recipe.pdfLink && (
+                      <a
+                        href={recipe.pdfLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl bg-app-bg text-[var(--color-accent-ocre)] border border-[var(--color-card-border)] font-bold text-xs"
+                      >
+                        <ExternalLink size={15} /> Recette
+                      </a>
+                    )}
+                    <button
+                      onClick={async () => {
+                        const newMenu = [...menu];
+                        newMenu[index] = { ...newMenu[index], cooked: !newMenu[index].cooked };
+                        await updateDoc(doc(db, "households", householdId), { currentMenu: newMenu });
+                      }}
+                      className={`w-10 h-10 flex items-center justify-center rounded-xl font-bold transition-all shadow-sm ${
+                        recipe.cooked ? 'bg-green-500 text-white' : 'bg-[var(--color-accent-ocre)] text-white'
+                      }`}
+                    >
+                      <Check size={16} strokeWidth={3} />
+                    </button>
+                  </>
+                )}
+              </div>
+            </MotionDiv>
+          );
+        })}
+      </div>
+
+      {/* ── CTA FLOTTANT ── */}
       {!isValidated && menu.length > 0 && (
-        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] left-0 right-0 px-6 z-40 pointer-events-none">
-          <div className="max-w-md mx-auto pointer-events-auto">
-            <button 
-              onClick={() => syncMenuAndCart(menu, { redirect: true, markValidated: true })}
-              disabled={isValidating}
-              className="btn-primary w-full shadow-[0_10px_40px_rgba(6,9,7,0.2)]"
-            >
-              {isValidating ? <RefreshCw className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
-              Valider le panier
-            </button>
-          </div>
+        <div className="fixed bottom-24 left-0 right-0 px-4 z-[60] flex justify-center pointer-events-none">
+          <button
+            onClick={() => syncMenuAndCart(menu, { redirect: true, markValidated: true })}
+            className="btn-primary px-8 h-12 shadow-2xl pointer-events-auto"
+          >
+            {isValidating
+              ? <RefreshCw size={16} className="animate-spin" />
+              : <><span>Lancer la semaine</span> <ArrowRight size={16} /></>
+            }
+          </button>
         </div>
       )}
 
-      {/* MODALE DE FILTRES - PORTAL */}
-      {isFilterModalOpen && createPortal(
-        <div 
-          className="fixed inset-0 flex items-center justify-center p-4 animate-fade-in" 
-          style={{ zIndex: 99999, backgroundColor: 'rgba(6, 9, 7, 0.85)', backdropFilter: 'blur(12px)' }}
-          onClick={() => setIsFilterModalOpen(false)}
-        >
-          <div 
-            className="w-full max-w-sm bg-forest-deepest border border-mint/20 rounded-[2.5rem] p-8 shadow-2xl relative animate-slide-in-bottom max-h-[90vh] overflow-y-auto scrollbar-hide"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button onClick={() => setIsFilterModalOpen(false)} className="absolute top-6 right-6 text-cream/30 hover:text-mint transition-colors p-2 bg-white/5 rounded-full">
-              <X size={20} />
-            </button>
-            
-            <h2 className="text-cream font-display font-black text-2xl tracking-tight mb-8 mt-2 leading-tight">
-              Préférences<br/><span className="text-mint">du Menu</span>
-            </h2>
-
-            {/* NOMBRE DE RECETTES */}
-            <div className="mb-8">
-              <p className="text-[10px] font-black text-mint/50 uppercase tracking-[0.2em] mb-3">Nombre de recettes</p>
-              <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl p-2">
-                <button 
-                  onClick={() => setRecipeCount(Math.max(1, recipeCount - 1))}
-                  className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-cream hover:bg-white/10 transition-colors"
-                >
-                  <Minus size={20} />
-                </button>
-                <div className="flex flex-col items-center">
-                  <span className="text-2xl font-black text-cream leading-none">{recipeCount}</span>
-                </div>
-                <button 
-                  onClick={() => setRecipeCount(Math.min(14, recipeCount + 1))}
-                  className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-cream hover:bg-white/10 transition-colors"
-                >
-                  <Plus size={20} />
-                </button>
-              </div>
-            </div>
-
-            {/* FILTRE : TEMPS (EXPRESS) */}
-            <div className="mb-8">
-              <p className="text-[10px] font-black text-mint/50 uppercase tracking-[0.2em] mb-3">Temps de préparation</p>
-              <button 
-                onClick={() => setFilterExpress(!filterExpress)}
-                className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border ${
-                  filterExpress 
-                    ? 'bg-mint/10 border-mint/30 text-cream'
-                    : 'bg-white/5 border-white/5 text-cream/60 hover:bg-white/10 hover:text-cream'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Clock size={18} />
-                  <span className="text-xs font-bold uppercase tracking-widest">Express (Max 30 min)</span>
-                </div>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${filterExpress ? 'border-mint bg-mint' : 'border-white/20'}`}>
-                  {filterExpress && <Check size={12} className="text-forest-deepest" />}
-                </div>
-              </button>
-            </div>
-
-            {/* FILTRE : PROTÉINES */}
-            <div className="mb-8">
-              <p className="text-[10px] font-black text-mint/50 uppercase tracking-[0.2em] mb-3">Protéines souhaitées</p>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { id: 'poulet', label: 'Poulet', icon: Drumstick },
-                  { id: 'bœuf', label: 'Bœuf', icon: Beef },
-                  { id: 'porc', label: 'Porc', icon: Ham },
-                  { id: 'poisson', label: 'Poisson', icon: Fish }
-                ].map(prot => {
-                  const isSelected = filterProteins.includes(prot.id);
-                  return (
-                    <button
-                      key={prot.id}
-                      onClick={() => toggleProtein(prot.id)}
-                      className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all ${
-                        isSelected 
-                          ? 'bg-mint border-mint text-forest-deepest shadow-sm' 
-                          : 'bg-white/5 border-white/5 text-cream/50 hover:bg-white/10 hover:text-cream'
-                      }`}
-                    >
-                      <prot.icon size={14} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">{prot.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* FILTRE : RÉGIME / EXCLUSION CUMULABLES */}
-            <div className="mb-10">
-              <p className="text-[10px] font-black text-mint/50 uppercase tracking-[0.2em] mb-3">Régime & Allergies</p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => toggleDietTag("")}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all text-[10px] font-bold uppercase tracking-widest ${
-                    filterTags.length === 0 
-                      ? 'bg-white/20 border-white/40 text-cream shadow-sm' 
-                      : 'bg-transparent border-white/10 text-cream/40 hover:border-white/20 hover:text-cream/80'
-                  }`}
-                >
-                  Aucun
-                </button>
-                {[
-                  { id: 'végé', label: 'Végétarien', icon: Leaf },
-                  { id: 'sans gluten', label: 'Sans Gluten', icon: Wheat },
-                  { id: 'sans lactose', label: 'Sans Lactose', icon: Milk },
-                  { id: 'sans sauce soja', label: 'Sans Soja', icon: BottleWine },
-                  { id: 'sans fruits à coque', label: 'Sans Fruits à Coque', icon: PeanutIcon }
-                ].map(tag => {
-                  const isSelected = filterTags.includes(tag.id);
-                  return (
-                    <button
-                      key={tag.id}
-                      onClick={() => toggleDietTag(tag.id)}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all ${
-                        isSelected 
-                          ? 'bg-mint border-mint text-forest-deepest shadow-sm' 
-                          : 'bg-transparent border-white/10 text-cream/40 hover:border-white/20 hover:text-cream/80'
-                      }`}
-                    >
-                      {tag.icon && <tag.icon size={12} />}
-                      <span className="text-[10px] font-bold uppercase tracking-widest">{tag.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* BOUTON GÉNÉRER AVEC COMPTEUR DYNAMIQUE */}
-            <button 
-              onClick={handleGenerateFilteredMenu}
-              disabled={availableRecipes.length === 0 || isGenerating}
-              className={`w-full py-4 rounded-2xl flex flex-col justify-center items-center transition-all ${
-                availableRecipes.length > 0 
-                  ? 'bg-mint text-forest-deepest hover:bg-[#10b981] shadow-lg active:scale-95' 
-                  : 'bg-white/5 text-cream/20 cursor-not-allowed'
-              }`}
-            >
-              <span className="font-black uppercase tracking-widest text-[11px] mb-0.5 flex items-center gap-2">
-                {isGenerating ? <RefreshCw className="animate-spin" size={14} /> : null}
-                {availableRecipes.length > 0 ? 'Générer le menu' : 'Aucune recette trouvée'}
-              </span>
-              <span className="text-[9px] font-mono font-bold opacity-60">
-                {availableRecipes.length} recette{availableRecipes.length > 1 ? 's' : ''} correspondante{availableRecipes.length > 1 ? 's' : ''}
-              </span>
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
+      {/* ── MODALES ── */}
+      <ConfirmModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+        onConfirm={handleResetMenu}
+        title="Nouveau menu ?"
+        message="Voulez-vous annuler le menu actuel pour en créer un nouveau ? Vos courses déjà effectuées resteront dans le panier."
+        confirmText="Nouveau menu"
+        variant="primary"
+      />
+      <ConfirmModal
+        isOpen={isRegenModalOpen}
+        onClose={() => setIsRegenModalOpen(false)}
+        onConfirm={generateMenu}
+        title="Tout régénérer ?"
+        message="Votre sélection actuelle sera remplacée par de nouvelles recettes basées sur vos filtres."
+        confirmText="Régénérer"
+        variant="primary"
+      />
     </div>
   );
 }

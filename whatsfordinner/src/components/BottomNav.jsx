@@ -1,52 +1,72 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, LayoutList, BookOpen, ShoppingBasket } from "lucide-react";
+import { Home, CalendarDays, ChefHat, ShoppingBag } from "lucide-react";
 
 export default function BottomNav() {
   const location = useLocation();
-  
+
   const navItems = [
     { path: "/", icon: Home, label: "Accueil" },
-    { path: "/menu", icon: LayoutList, label: "Menu" },
-    { path: "/recipes", icon: BookOpen, label: "Recettes" },
-    { path: "/cart", icon: ShoppingBasket, label: "Courses" }
+    { path: "/menu", icon: CalendarDays, label: "Menu" },
+    { path: "/recipes", icon: ChefHat, label: "Recettes" },
+    { path: "/cart", icon: ShoppingBag, label: "Courses" }
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 w-full z-20 bg-mint border-t border-forest-deepest/10 shadow-[0_-4px_20px_rgba(6,9,7,0.05)] pb-[env(safe-area-inset-bottom)] pointer-events-auto">
-      
-      <nav className="flex justify-around items-center h-[70px] px-2 max-w-3xl mx-auto">
+    <div className="fixed bottom-0 left-0 w-full z-[100] px-6 pb-8 pointer-events-none">
+      <nav className="
+        pointer-events-auto
+        max-w-md mx-auto
+        bg-card-bg border border-card-border
+        shadow-[0_20px_50px_rgba(0,0,0,0.2)]
+        rounded-[2.5rem]
+        flex justify-around items-center
+        h-20 px-4
+      ">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
-          
+
           return (
-            <Link 
-              key={item.path} 
+            <Link
+              key={item.path}
               to={item.path}
-              className="flex flex-col items-center justify-center w-20 h-full transition-all duration-300"
-              /* On force la couleur ici pour éviter l'opacité CSS qui crée les points noirs */
-              style={{ color: isActive ? 'var(--color-nav-active)' : 'var(--color-nav-inactive)' }}
+              className="relative flex flex-col items-center justify-center flex-1 h-full"
             >
-              <div className={`transition-all duration-300 ${isActive ? '-translate-y-1 scale-110' : 'translate-y-1'}`}>
-                <Icon 
-                  size={26} 
+              {/* Icône : transition rapide uniquement sur l'opacité et le transform */}
+              <div className={`transition-[opacity,transform] duration-200 ${
+                isActive
+                  ? 'text-accent-ocre scale-110 opacity-100'
+                  : 'text-app-text opacity-25'
+              }`}>
+                <Icon
+                  size={24}
                   strokeWidth={isActive ? 2.5 : 2}
-                  /* Ces propriétés assurent un rendu propre des jonctions */
+                  strokeOpacity={1}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
               </div>
-              
-              <span className={`text-[10px] font-display font-black uppercase tracking-widest transition-all duration-300 ${
-                isActive ? 'opacity-100 mt-1.5' : 'opacity-0 h-0 overflow-hidden'
-              }`}>
+
+              {/* Label : pas de transition compliquée ici */}
+              <span className={`
+                text-[9px] font-black uppercase tracking-[0.1em] mt-1.5
+                ${isActive ? 'text-accent-ocre' : 'text-app-text opacity-30'}
+              `}>
                 {item.label}
               </span>
+
+              {/* L'indicateur : On utilise transform scaleX au lieu de width pour la performance */}
+              <div
+                className={`
+                  h-0.5 bg-accent-ocre rounded-full mt-1
+                  transition-transform duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]
+                  ${isActive ? 'w-3 scale-x-100' : 'w-3 scale-x-0'}
+                `}
+              />
             </Link>
           );
         })}
       </nav>
-      
     </div>
   );
 }
