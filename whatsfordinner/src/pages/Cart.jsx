@@ -5,6 +5,11 @@ import { Plus, Circle, CheckCircle2, Trash2, List, ChefHat, Store, ChevronDown, 
 import SkeletonLoader from "../components/SkeletonLoader";
 import PageHeader from "../components/PageHeader";
 
+const normalizeName = value => String(value || "").trim().toLocaleLowerCase("fr");
+const getRayonForItem = (item, ingredientsMap) => item.type === "manual"
+  ? (item.rayon || ingredientsMap[normalizeName(item.baseName || item.name)] || "Extras")
+  : (ingredientsMap[normalizeName(item.baseName)] || "Autres");
+
 export default function Cart() {
   const [householdRef, setHouseholdRef] = useState(null);
   const [cart, setCart] = useState([]);
@@ -102,17 +107,12 @@ export default function Cart() {
     ...cart.map(item => item.rayon).filter(Boolean)
   ])].sort((a, b) => a.localeCompare(b, "fr")), [ingredientsMap, cart]);
 
-  const normalizeName = value => value.trim().toLocaleLowerCase("fr");
-  const rayonForItem = item => item.type === "manual"
-    ? (item.rayon || "Extras")
-    : (ingredientsMap[normalizeName(item.baseName || "")] || "Autres");
-
   const addManualItem = async (name, rayon) => {
     const normalizedName = normalizeName(name);
     const item = { id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, name: name.trim(), baseName: normalizedName, checked: false, type: "manual", rayon };
-    await updateDoc(householdRef, { currentCart: [...cart, item] });
     const safeId = normalizedName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `manual-${Date.now()}`;
     await setDoc(doc(db, "ingredients_dict", safeId), { name: normalizedName, rayon });
+    await updateDoc(householdRef, { currentCart: [...cart, item] });
     setIngredientsMap(previous => ({ ...previous, [normalizedName]: rayon }));
     setNewItem("");
     setPendingManualItem("");
@@ -122,7 +122,7 @@ export default function Cart() {
 
   const sortedRayons = useMemo(() => {
     const grouped = pendingItems.reduce((acc, item) => {
-      let rayon = rayonForItem(item);
+      let rayon = getRayonForItem(item, ingredientsMap);
       if (!acc[rayon]) acc[rayon] = [];
       acc[rayon].push(item);
       return acc;
@@ -207,7 +207,7 @@ export default function Cart() {
                   <Store size={14} /> {rayon}
                 </h3>
                 <div className="glass-panel rounded-3xl overflow-hidden divide-y divide-forest-deepest/5 border-none shadow-sm">
-                  {pendingItems.filter(i => rayonForItem(i) === rayon).map(item => (
+                  {pendingItems.filter(i => getRayonForItem(i, ingredientsMap) === rayon).map(item => (
                     <div 
                       key={item.id} 
                       onClick={() => toggleItemWithAnimation(item.id)} 

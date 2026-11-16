@@ -34,7 +34,6 @@ const PeanutIcon = ({ size = 24, className = "" }) => (
 export default function Menu() {
   const navigate = useNavigate();
   const [householdId, setHouseholdId] = useState(null);
-  const [userData, setUserData] = useState(null);
   const [allRecipes, setAllRecipes] = useState([]);
   const [menu, setMenu] = useState([]);
   const [cart, setCart] = useState([]);
@@ -66,7 +65,6 @@ export default function Menu() {
         const userSnap = await getDoc(doc(db, "users", user.uid));
         if (userSnap.exists()) {
           const uData = userSnap.data();
-          setUserData(uData);
           if (uData.householdId) {
             setHouseholdId(uData.householdId);
             unsubscribe = onSnapshot(doc(db, "households", uData.householdId), (docSnap) => {
@@ -114,7 +112,7 @@ export default function Menu() {
   };
 
   const syncMenuAndCart = async (newMenu, options = {}) => {
-    const { forceSyncCart = false, redirect = false, markValidated = false } = options;
+    const { redirect = false, markValidated = false } = options;
     if (!householdId) return;
     setIsValidating(true);
     try {
@@ -377,7 +375,7 @@ export default function Menu() {
                         </button>
                       </>
                     ) : (
-                      <button onClick={(e) => { e.stopPropagation(); syncMenuAndCart(menu.filter((_, i) => i !== index), {forceSyncCart: true}); }} className="p-2.5 rounded-full text-mint-deep hover:text-forest-deepest hover:bg-mint transition-colors">
+                      <button onClick={(e) => { e.stopPropagation(); syncMenuAndCart(menu.filter((_, i) => i !== index)); }} className="p-2.5 rounded-full text-mint-deep hover:text-forest-deepest hover:bg-mint transition-colors">
                         <Utensils size={16}/>
                       </button>
                     )}
@@ -408,7 +406,7 @@ export default function Menu() {
         <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] left-0 right-0 px-6 z-40 pointer-events-none">
           <div className="max-w-md mx-auto pointer-events-auto">
             <button 
-              onClick={() => syncMenuAndCart(menu, { redirect: true, markValidated: true, forceSyncCart: true })} 
+              onClick={() => syncMenuAndCart(menu, { redirect: true, markValidated: true })}
               disabled={isValidating}
               className="btn-primary w-full shadow-[0_10px_40px_rgba(6,9,7,0.2)]"
             >

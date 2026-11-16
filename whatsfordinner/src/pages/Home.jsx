@@ -69,7 +69,7 @@ export default function Home() {
       setUserData(prev => ({ ...prev, householdId: newId }));
       setHousehold({ name, currentMenu: [], currentCart: [], isMenuValidated: false });
       closeModal();
-    } catch (e) { setActionError("Erreur lors de la création."); } finally { setIsProcessing(false); }
+    } catch { setActionError("Erreur lors de la création."); } finally { setIsProcessing(false); }
   };
 
   const handleJoinHousehold = async () => {
@@ -84,7 +84,7 @@ export default function Home() {
         setHousehold(houseSnap.data());
         closeModal();
       } else { setActionError("Foyer introuvable."); }
-    } catch (e) { setActionError("Erreur de connexion."); } finally { setIsProcessing(false); }
+    } catch { setActionError("Erreur de connexion."); } finally { setIsProcessing(false); }
   };
 
   const handleRenameHousehold = async () => {
@@ -105,7 +105,7 @@ export default function Home() {
       await deleteDoc(doc(db, "users", user.uid));
       await deleteUser(user);
       navigate("/login");
-    } catch (e) { alert("Erreur. Reconnectez-vous avant de supprimer."); }
+    } catch { alert("Erreur. Reconnectez-vous avant de supprimer."); }
   };
 
   const closeModal = () => {
