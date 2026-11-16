@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { auth, db } from "../lib/firebase";
-import { doc, getDoc, updateDoc, onSnapshot, collection, getDocs } from "firebase/firestore";
-import { ShoppingBasket, Plus, Circle, CheckCircle2, Trash2, List, ChefHat, Store, ChevronDown, ChevronUp } from "lucide-react";
+import { doc, getDoc, updateDoc, onSnapshot, collection, getDocs, setDoc } from "firebase/firestore";
+import { Plus, Circle, CheckCircle2, Trash2, List, ChefHat, Store, ChevronDown, ChevronUp, X } from "lucide-react";
 import SkeletonLoader from "../components/SkeletonLoader";
 import PageHeader from "../components/PageHeader";
 
@@ -13,6 +13,9 @@ export default function Cart() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState("list");
   const [newItem, setNewItem] = useState("");
+  const [pendingManualItem, setPendingManualItem] = useState("");
+  const [selectedRayon, setSelectedRayon] = useState("");
+  const [newRayon, setNewRayon] = useState("");
   const [showCompleted, setShowCompleted] = useState(false);
 
   // États pour l'animation de sortie
@@ -94,10 +97,32 @@ export default function Cart() {
   // Performance : on recalcule les rayons uniquement si le panier change
   const pendingItems = useMemo(() => cart.filter(i => !i.checked), [cart]);
   const completedItems = useMemo(() => cart.filter(i => i.checked), [cart]);
+  const knownRayons = useMemo(() => [...new Set([
+    ...Object.values(ingredientsMap),
+    ...cart.map(item => item.rayon).filter(Boolean)
+  ])].sort((a, b) => a.localeCompare(b, "fr")), [ingredientsMap, cart]);
+
+  const normalizeName = value => value.trim().toLocaleLowerCase("fr");
+  const rayonForItem = item => item.type === "manual"
+    ? (item.rayon || "Extras")
+    : (ingredientsMap[normalizeName(item.baseName || "")] || "Autres");
+
+  const addManualItem = async (name, rayon) => {
+    const normalizedName = normalizeName(name);
+    const item = { id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, name: name.trim(), baseName: normalizedName, checked: false, type: "manual", rayon };
+    await updateDoc(householdRef, { currentCart: [...cart, item] });
+    const safeId = normalizedName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `manual-${Date.now()}`;
+    await setDoc(doc(db, "ingredients_dict", safeId), { name: normalizedName, rayon });
+    setIngredientsMap(previous => ({ ...previous, [normalizedName]: rayon }));
+    setNewItem("");
+    setPendingManualItem("");
+    setNewRayon("");
+    setSelectedRayon("");
+  };
 
   const sortedRayons = useMemo(() => {
     const grouped = pendingItems.reduce((acc, item) => {
-      let rayon = item.type === 'manual' ? "Extras" : (ingredientsMap[item.baseName] || "Autres");
+      let rayon = rayonForItem(item);
       if (!acc[rayon]) acc[rayon] = [];
       acc[rayon].push(item);
       return acc;
@@ -161,9 +186,14 @@ export default function Cart() {
         {/* AJOUT MANUEL */}
         <form onSubmit={async (e) => {
           e.preventDefault();
-          if (!newItem.trim()) return;
-          await updateDoc(householdRef, { currentCart: [...cart, { id: Date.now().toString(), name: newItem.trim(), baseName: newItem.trim().toLowerCase(), checked: false, type: 'manual' }] });
-          setNewItem("");
+          const name = newItem.trim();
+          if (!name) return;
+          const knownRayon = ingredientsMap[normalizeName(name)];
+          if (knownRayon) await addManualItem(name, knownRayon);
+          else {
+            setPendingManualItem(name);
+            setSelectedRayon(knownRayons[0] || "");
+          }
         }} className="relative mb-8">
           <input type="text" value={newItem} onChange={e => setNewItem(e.target.value)} placeholder="Ajouter un article..." className="w-full bg-forest-deepest/5 border border-forest-deepest/10 rounded-2xl py-4 pl-5 pr-14 text-forest-deepest placeholder-forest-deepest/30 outline-none focus:bg-white transition-all shadow-inner" />
           <button type="submit" className="absolute right-2 top-2 bottom-2 btn-primary p-0 aspect-square rounded-xl"><Plus size={24} /></button>
@@ -177,7 +207,7 @@ export default function Cart() {
                   <Store size={14} /> {rayon}
                 </h3>
                 <div className="glass-panel rounded-3xl overflow-hidden divide-y divide-forest-deepest/5 border-none shadow-sm">
-                  {pendingItems.filter(i => (i.type === 'manual' ? "Extras" : (ingredientsMap[i.baseName] || "Autres")) === rayon).map(item => (
+                  {pendingItems.filter(i => rayonForItem(i) === rayon).map(item => (
                     <div 
                       key={item.id} 
                       onClick={() => toggleItemWithAnimation(item.id)} 
@@ -200,14 +230,15 @@ export default function Cart() {
             ))
           ) : (
             /* VUE RECETTE */
-            menu.map(recipe => {
-              const recipePending = recipe.ingredients?.filter(ing => pendingItems.some(p => p.baseName === ing.name.toLowerCase()));
+            <>
+            {menu.map(recipe => {
+              const recipePending = recipe.ingredients?.filter(ing => pendingItems.some(p => p.type !== "manual" && p.baseName === normalizeName(ing.name)));
               if (!recipePending || recipePending.length === 0) return null;
               return (
                 <div key={recipe.id} className="glass-card shadow-sm border-none">
                   <h3 className="text-forest-deepest font-bold text-lg mb-4">{recipe.name}</h3>
                   {recipePending.map((ing, i) => {
-                    const cItem = cart.find(c => c.baseName === ing.name.toLowerCase());
+                    const cItem = cart.find(c => c.type !== "manual" && c.baseName === normalizeName(ing.name) && !c.checked);
                     return (
                       <div key={i} onClick={() => toggleItemWithAnimation(cItem?.id)} className={`flex justify-between items-center p-2 -mx-2 rounded-xl hover:bg-forest-deepest/5 cursor-pointer ${animatingItems.includes(cItem?.id) ? 'opacity-30 line-through' : ''}`}>
                         <div className="flex items-center gap-3">
@@ -220,7 +251,19 @@ export default function Cart() {
                   })}
                 </div>
               );
-            })
+            })}
+            {pendingItems.filter(item => item.type === "manual").length > 0 && (
+              <div className="glass-card shadow-sm border-none">
+                <h3 className="text-forest-deepest font-bold text-lg mb-4">Hors recettes</h3>
+                {pendingItems.filter(item => item.type === "manual").map(item => (
+                  <div key={item.id} onClick={() => toggleItemWithAnimation(item.id)} className={`flex items-center gap-3 p-2 -mx-2 rounded-xl hover:bg-forest-deepest/5 cursor-pointer ${animatingItems.includes(item.id) ? 'opacity-30 line-through' : ''}`}>
+                    {animatingItems.includes(item.id) ? <CheckCircle2 className="text-mint-deep" size={18}/> : <Circle className="text-forest-deepest/20" size={18}/>}
+                    <span className="text-forest-deepest text-sm font-medium">{item.name.split(' (')[0]}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            </>
           )}
 
           {/* PANIER (DÉJÀ COCHÉS) */}
@@ -250,6 +293,19 @@ export default function Cart() {
           )}
         </div>
       </div>
+      {pendingManualItem && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="manual-rayon-title">
+          <div className="glass-card w-full max-w-md p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 mb-2">
+              <div><h2 id="manual-rayon-title" className="text-xl font-black text-forest-deepest">Quel rayon pour cet article ?</h2><p className="text-sm text-forest-deepest/60 mt-1">« {pendingManualItem} » sera classé ici et mémorisé.</p></div>
+              <button type="button" onClick={() => setPendingManualItem("")} className="p-2 rounded-xl hover:bg-forest-deepest/5" aria-label="Fermer"><X size={20}/></button>
+            </div>
+            {knownRayons.length > 0 && <label className="block text-sm font-bold mt-5 mb-2">Rayons connus<select value={selectedRayon} onChange={e => { setSelectedRayon(e.target.value); setNewRayon(""); }} className="w-full mt-2 bg-white border border-forest-deepest/10 rounded-xl p-3 font-medium">{knownRayons.map(rayon => <option key={rayon} value={rayon}>{rayon}</option>)}</select></label>}
+            <label className="block text-sm font-bold mt-4 mb-2">Proposer un nouveau rayon<input value={newRayon} onChange={e => setNewRayon(e.target.value)} onFocus={() => setSelectedRayon("")} placeholder="Ex. Épicerie" className="w-full mt-2 bg-white border border-forest-deepest/10 rounded-xl p-3 font-medium outline-none focus:border-mint-deep" /></label>
+            <button type="button" disabled={!newRayon.trim() && !selectedRayon} onClick={() => addManualItem(pendingManualItem, newRayon.trim() || selectedRayon)} className="btn-primary w-full py-3 rounded-xl mt-4 disabled:opacity-40">Ajouter au panier</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
