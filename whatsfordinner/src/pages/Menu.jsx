@@ -201,7 +201,7 @@ export default function Menu() {
             </span>
           </div>
           {/* h1 géré par le CSS global (clamp 28–40px) */}
-          <h1 className="text-[var(--color-app-text)] leading-none">
+          <h1 className="font-display text-[clamp(5rem,23vw,25rem)] leading-[0.72] tracking-[-0.05em] text-[var(--color-app-text)]">
             {isValidated ? "Le Menu" : "La Carte"}
           </h1>
         </div>

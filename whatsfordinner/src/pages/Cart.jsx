@@ -342,12 +342,14 @@ export default function Cart() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen pt-4 px-4 md:px-8 pb-48 animate-fade-in bg-app-bg w-full">
+    <div className="flex flex-col min-h-screen pb-40 animate-fade-in bg-app-bg text-app-text w-full">
       <style>{`
         .item-row-base { transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); max-height: 120px; opacity: 1; }
         .is-animating-checked { opacity: 0.4 !important; }
         .is-animating-checked .ingredient-name { text-decoration: line-through !important; }
         .is-exiting { transform: translateX(30px); opacity: 0; max-height: 0; padding: 0; margin: 0; overflow: hidden; }
+        .rayon-card { box-shadow: 0 12px 40px rgba(36, 32, 28, 0.045), 0 2px 5px rgba(36, 32, 28, 0.025); }
+        .dark .rayon-card { box-shadow: 0 15px 45px rgba(0, 0, 0, 0.16); }
       `}</style>
 
       {/* Aisle assignment modal */}
@@ -361,74 +363,94 @@ export default function Cart() {
       )}
 
       {/* HEADER */}
-      <header className="mb-6 flex flex-col gap-4 pt-2">
-        <div className="flex justify-between items-end">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="px-2.5 py-0.5 rounded-full bg-[var(--color-accent-ocre)]/10 text-[var(--color-accent-ocre)] text-[10px] font-black uppercase tracking-widest">
-                {pendingItems.length} articles restants
-              </span>
+      <header className="px-6 md:px-12 lg:px-16 pt-8 md:pt-12">
+        <div className="border-b border-[var(--color-card-border)] pb-8 md:pb-10">
+          <div className="flex flex-col xl:flex-row xl:items-end gap-8">
+            <div className="shrink-0">
+              <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--color-app-text)]/35">
+                {pendingItems.length} article{pendingItems.length === 1 ? "" : "s"} à acheter
+              </p>
+              <h1 className="font-display text-[clamp(5rem,23vw,25rem)] leading-[0.72] tracking-[-0.05em]">
+                Panier
+              </h1>
             </div>
-            {/* h1 géré par CSS global (clamp 28–40px) */}
-            <h1 className="text-[var(--color-app-text)] leading-none">
-              Le Panier
-            </h1>
+
+            <div className="flex min-w-0 flex-1 items-center gap-2 xl:pb-1">
+              <form onSubmit={handleAddItem} className="relative min-w-0 flex-1">
+                <input
+                  type="text"
+                  value={newItem}
+                  onChange={e => setNewItem(e.target.value)}
+                  placeholder="Ajouter un article..."
+                  className="h-[52px] w-full rounded-[1rem] border border-[var(--color-card-border)] bg-[var(--color-card-bg)]/65 pl-5 pr-14 text-sm font-medium text-[var(--color-app-text)] outline-none backdrop-blur-xl transition-all placeholder:text-[var(--color-app-text)]/25 focus:border-[var(--color-accent-ocre)]/35 focus:shadow-[0_10px_30px_rgba(0,0,0,0.05)] md:h-[56px]"
+                />
+                <button
+                  type="submit"
+                  aria-label="Ajouter"
+                  className="absolute right-2 top-2 bottom-2 flex w-11 items-center justify-center rounded-[0.8rem] bg-[var(--color-accent-ocre)] text-[var(--color-cream)] transition-all hover:bg-[var(--color-accent-ocre-deep)] active:scale-95 md:w-12"
+                >
+                  <Plus size={20} strokeWidth={2.5} />
+                </button>
+              </form>
+
+              <button
+                type="button"
+                onClick={() => setViewMode(viewMode === "list" ? "recipe" : "list")}
+                aria-label={viewMode === "list" ? "Afficher par recettes" : "Afficher par rayons"}
+                className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[1rem] border border-[var(--color-card-border)] bg-[var(--color-card-bg)]/55 text-[var(--color-app-text)]/40 backdrop-blur-xl transition-all hover:border-[var(--color-accent-ocre)]/20 hover:text-[var(--color-accent-ocre)] active:scale-95 md:h-[56px] md:w-[56px]"
+              >
+                {viewMode === "list" ? <ChefHat size={19} strokeWidth={1.8} /> : <List size={19} strokeWidth={1.8} />}
+              </button>
+
+              {cart.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsClearModalOpen(true)}
+                  aria-label="Vider le panier"
+                  className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[1rem] border border-[var(--color-card-border)] bg-[var(--color-card-bg)]/55 text-[var(--color-app-text)]/25 backdrop-blur-xl transition-all hover:border-red-500/15 hover:text-red-500 active:scale-95 md:h-[56px] md:w-[56px]"
+                >
+                  <Trash2 size={18} strokeWidth={1.8} />
+                </button>
+              )}
+            </div>
           </div>
-
-          {cart.length > 0 && (
-            <button
-              onClick={() => setIsClearModalOpen(true)}
-              className="w-11 h-11 flex items-center justify-center rounded-xl bg-white dark:bg-[var(--color-card-bg)] border border-[var(--color-card-border)] text-red-400 shadow-sm active:scale-95 transition-all"
-            >
-              <Trash2 size={20} />
-            </button>
-          )}
-        </div>
-
-        <div className="flex bg-[var(--color-app-text)]/5 p-1.5 rounded-[2rem] border border-[var(--color-card-border)] shadow-inner w-full lg:max-w-md">
-          <button
-            onClick={() => setViewMode("list")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-[1.4rem] transition-all ${viewMode === 'list' ? 'bg-white dark:bg-white/10 text-[var(--color-accent-ocre)] shadow-md' : 'text-[#A0A0A0] dark:text-[#505050]'}`}
-          >
-            <List size={14} strokeWidth={3} /> Rayons
-          </button>
-
-          <button
-            onClick={() => setViewMode("recipe")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-black uppercase tracking-[0.2em] rounded-[1.4rem] transition-all ${
-              viewMode === 'recipe'
-                ? 'bg-white dark:bg-white/10 text-[var(--color-accent-ocre)] shadow-md'
-                : 'text-[#A0A0A0] dark:text-[#505050]'
-            }`}
-          >
-            <ChefHat size={14} strokeWidth={3} /> Recettes
-          </button>
         </div>
       </header>
 
-      {/* INPUT AJOUT */}
-      <form onSubmit={handleAddItem} className="relative mb-8 group max-w-4xl">
-        <input
-          type="text"
-          value={newItem}
-          onChange={e => setNewItem(e.target.value)}
-          placeholder="Un ajout ?"
-          className="w-full bg-white dark:bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-[2.5rem] py-5 px-7 text-xs text-[var(--color-app-text)] outline-none focus:ring-4 focus:ring-[var(--color-accent-ocre)]/5 transition-all shadow-sm"
-        />
-        <button type="submit" className="absolute right-3 top-2.5 bottom-2.5 bg-[var(--color-accent-ocre)] text-white px-3 rounded-[2rem] flex items-center justify-center shadow-lg active:scale-95 transition-transform">
-          <Plus size={22} strokeWidth={3} />
-        </button>
-      </form>
-
       {/* LISTES */}
-      <div className={`grid gap-8 ${viewMode === "list" ? "grid-cols-1 xl:grid-cols-2" : "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"}`}>
+      <section className="px-6 pt-8 md:px-12 lg:px-16">
+      {pendingItems.length === 0 ? (
+        <div className="flex min-h-[24rem] flex-col items-center justify-center rounded-[1.7rem] border border-dashed border-[var(--color-card-border)] bg-[var(--color-card-bg)]/35 px-8 text-center">
+          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-accent-ocre)]/10 text-[var(--color-accent-ocre)]">
+            <ShoppingBag size={25} strokeWidth={1.8} />
+          </div>
+          <h2 className="font-display text-2xl tracking-tight">Panier vide</h2>
+          <p className="mt-3 max-w-sm text-sm leading-relaxed text-[var(--color-app-text)]/45">
+            Tout est acheté. Tu peux profiter du calme… ou ajouter quelque chose dont tu viens soudainement de te souvenir.
+          </p>
+        </div>
+      ) : (
+      <div className={`grid gap-5 xl:gap-7 ${viewMode === "list" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"}`}>
         {viewMode === "list" ? (
           sortedRayons.map((rayon) => (
-            <div key={rayon} className="space-y-2 animate-fade-in h-fit">
-              <h3 className="font-display font-bold text-[var(--color-app-text)]/40 text-base flex items-center gap-2.5 px-2">
-                <Store size={13} strokeWidth={3} className="text-[var(--color-accent-ocre)]" /> {rayon}
-              </h3>
-              <div className="bg-white dark:bg-[var(--color-card-bg)] rounded-[1.5rem] overflow-hidden border border-[var(--color-card-border)] shadow-sm divide-y divide-[var(--color-card-border)]">
+            <section key={rayon} className="rayon-card h-fit overflow-hidden rounded-[1.7rem] border border-[var(--color-card-border)] bg-[var(--color-card-bg)]/65 backdrop-blur-xl">
+              <div className="flex items-center justify-between border-b border-[var(--color-card-border)] px-5 py-4 md:px-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-accent-ocre)]/10 text-[var(--color-accent-ocre)]">
+                    <Store size={16} strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <h2 className="font-body text-xs font-bold tracking-tight">{rayon}</h2>
+                    <p className="mt-0.5 text-[8px] font-bold uppercase tracking-[0.18em] text-[var(--color-app-text)]/30">
+                      {pendingItems.filter(item => getItemAisle(item, ingredientsMap) === rayon).length} article{pendingItems.filter(item => getItemAisle(item, ingredientsMap) === rayon).length === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                </div>
+                <span className="font-display text-2xl text-[var(--color-app-text)]/10">
+                  {String(sortedRayons.indexOf(rayon) + 1).padStart(2, "0")}
+                </span>
+              </div>
+              <div className="divide-y divide-[var(--color-card-border)]">
                 {pendingItems.filter(i => getItemAisle(i, ingredientsMap) === rayon).map(item => (
                   <div
                     key={item.id}
@@ -452,7 +474,7 @@ export default function Cart() {
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
           ))
         ) : (
           <>
@@ -502,6 +524,8 @@ export default function Cart() {
           </>
         )}
       </div>
+      )}
+      </section>
 
       {/* SECTION DÉJÀ PRIS */}
       {completedItems.length > 0 && (

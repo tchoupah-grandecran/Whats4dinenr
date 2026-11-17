@@ -7,7 +7,7 @@
 @font-face {
   font-family: 'Recoleta';
   src: url('/recoletablack.otf') format('opentype');
-  font-weight: 700 900;
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -18,122 +18,190 @@
   --font-body: "Satoshi", sans-serif;
   --font-mono: "Fira Code", monospace;
 
-  --color-app-bg: #FCF9F2;
-  --color-app-text: #060907;
-  --color-card-bg: #FFFFFF;
-  --color-card-border: rgba(6, 9, 7, 0.05);
-  --color-accent-ocre: #D97706;
-  --color-accent-ocre-deep: #B45309;
-  --color-cream: #faf9f5;
+  --color-app-bg: #f2ede3;
+  --color-app-text: #24201c;
+  --color-card-bg: #fbf8f2;
+  --color-card-border: rgba(70, 52, 40, 0.1);
+  --color-accent-ocre: #7a4b35;
+  --color-accent-ocre-deep: #5a3425;
+  --color-cream: #f8f3ea;
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
   .dark {
-    --color-app-bg: #0F110E;
-    --color-app-text: #F3F4F1;
-    --color-card-bg: #181A17;
-    --color-card-border: rgba(243, 244, 241, 0.08);
-    --color-accent-ocre: #F59E0B;
-    --color-accent-ocre-deep: #D97706;
+    --color-app-bg: #211c18;
+    --color-app-text: #f3ede3;
+    --color-card-bg: #2b2520;
+    --color-card-border: rgba(243, 237, 227, 0.09);
+    --color-accent-ocre: #b98261;
+    --color-accent-ocre-deep: #d19a78;
+    --color-cream: #f0e7d9;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-card-bg border border-card-border rounded-[2.5rem] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] transition-all duration-500;
+    position: relative;
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-2xl);
+    padding: calc(var(--spacing) * 5);
+    background: linear-gradient(145deg, #ffffffd1, #ffffff85);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 2px 4px #37281e06, 0 12px 32px #37281e0e, inset 0 1px #ffffffa6;
+    transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+  }
+
+  .glass-card:hover {
+    box-shadow: 0 3px 6px #37281e09, 0 18px 40px #37281e13, inset 0 1px #ffffffb8;
+  }
+
+  .dark .glass-card {
+    background: linear-gradient(145deg, #ffffff0e, #ffffff05);
+    box-shadow: 0 2px 5px #0000002e, 0 16px 36px #00000038, inset 0 1px #ffffff0b;
   }
 
   .glass-panel {
-    @apply bg-card-bg/80 backdrop-blur-xl border-b border-card-border;
+    border-bottom: 1px solid var(--color-card-border);
+    -webkit-backdrop-filter: blur(18px) saturate(115%);
+    backdrop-filter: blur(18px) saturate(115%);
+    background: linear-gradient(#fbf8f2e0, #fbf8f2b3);
+    box-shadow: 0 8px 28px #37281e0b, inset 0 -1px #ffffff59;
+  }
+
+  .dark .glass-panel {
+    background: linear-gradient(#2b2520eb, #2b2520c7);
+    box-shadow: 0 8px 28px #00000038, inset 0 -1px #ffffff06;
   }
 
   .btn-primary {
-    @apply flex items-center justify-center gap-3 bg-accent-ocre text-[#FCF9F2] hover:bg-accent-ocre-deep hover:shadow-[0_10px_25px_rgba(217,119,6,0.2)] shadow-md active:scale-[0.98] disabled:opacity-50 rounded-2xl py-4 px-6 text-lg font-display transition-all duration-300 border-none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2);
+    border: 1px solid #ffffff14;
+    border-radius: 0.85rem;
+    padding: 0.78rem 1.25rem;
+    color: #f8f3ea;
+    background: linear-gradient(145deg, var(--color-accent-ocre), var(--color-accent-ocre-deep));
+    box-shadow: 0 3px 6px #5a34252e, 0 9px 20px #5a342521, inset 0 1px #ffffff24;
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 700;
+    transition: transform 0.18s, box-shadow 0.18s, filter 0.18s;
+  }
+
+  .btn-primary:hover {
+    filter: brightness(1.04);
+    box-shadow: 0 4px 8px #5a342533, 0 12px 26px #5a34252b, inset 0 1px #ffffff2b;
+  }
+
+  .btn-primary:active {
+    transform: scale(0.975);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.45;
+    box-shadow: none;
   }
 
   .btn-secondary {
-    @apply flex items-center justify-center gap-3 bg-app-bg text-app-text border border-card-border shadow-sm hover:bg-card-bg active:scale-[0.97] rounded-full py-4 px-6 text-sm font-bold uppercase tracking-widest transition-all;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--spacing) * 2);
+    border: 1px solid var(--color-card-border);
+    border-radius: 0.85rem;
+    padding: 0.65rem 1rem;
+    color: var(--color-app-text);
+    background: #fbf8f299;
+    box-shadow: 0 2px 5px #37281e09, inset 0 1px #ffffff8c;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: background 0.18s, transform 0.18s, box-shadow 0.18s;
+  }
+
+  .btn-secondary:hover {
+    background: #fbf8f2eb;
+    box-shadow: 0 5px 12px #37281e0f, inset 0 1px #ffffffa6;
+  }
+
+  .btn-secondary:active {
+    transform: scale(0.97);
+  }
+
+  .dark .btn-secondary {
+    background: #ffffff09;
+    box-shadow: 0 3px 8px #00000029, inset 0 1px #ffffff0a;
   }
 
   .badge {
-    @apply font-body text-[10px] font-bold px-3 py-1 rounded-full bg-accent-ocre/10 text-accent-ocre uppercase tracking-[0.15em] border border-accent-ocre/10;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #7a4b351a;
+    border-radius: 999px;
+    padding: 0.3rem 0.6rem;
+    color: var(--color-accent-ocre);
+    background: #7a4b3518;
+    box-shadow: inset 0 1px #ffffff61;
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   5. Socle PWA bords perdus
-   ─────────────────────────────────────────────────────────────────────────
-   Stratégie :
-   - html/body en position:fixed → cadre immuable, pas de rebond élastique
-   - #root en position:absolute → s'étend jusqu'au bas PHYSIQUE de l'écran,
-     y compris sous le home indicator iOS, grâce à bottom négatif compensant
-     la safe-area-inset-bottom. Le fond de l'app couvre ainsi toute la zone.
-   - Le contenu scrollable utilise toujours padding-bottom avec
-     env(safe-area-inset-bottom) pour rester lisible au-dessus du home indicator.
-   ───────────────────────────────────────────────────────────────────────── */
-html, body {
-  position: fixed !important;
-  inset: 0 !important;           /* top/right/bottom/left: 0 */
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-  -webkit-tap-highlight-color: transparent;
-  background-color: var(--color-app-bg);
-}
-
-#root {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  /* ✅ CORRECTION : on dépasse vers le bas sous le home indicator iOS.
-     inset: 0 remplacé — bottom négatif = safe-area-inset-bottom pour
-     que le fond de #root couvre toute la zone physique de l'écran. */
-  bottom: calc(-1 * env(safe-area-inset-bottom, 0px)) !important;
-  background-color: var(--color-app-bg);
-}
-
-/* Conteneurs directs de #root qui utilisent absolute/fixed + inset-0 :
-   on force absolute + inset:0 pour qu'ils épousent #root jusqu'en bas. */
-#root > .fixed.inset-0,
-#root > .absolute.inset-0 {
-  position: absolute !important;
-  inset: 0 !important;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   6. Base styles
-   ───────────────────────────────────────────────────────────────────────── */
+/* Socle général partagé avec la version en production. */
 @layer base {
+  html {
+    min-height: 100%;
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
   body {
-    width: 100%;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    padding-top: env(safe-area-inset-top);
     @apply font-body bg-app-bg text-app-text relative overflow-x-hidden;
     color: var(--color-app-text);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
-    transition: background-color 0.70s ease;
-    background-image: radial-gradient(var(--color-app-text) 0.5px, transparent 0.5px);
-    background-size: 32px 32px;
+    transition: background-color 0.7s ease;
+    background-color: var(--color-app-bg);
+    background-image: radial-gradient(#24201c0e 0.6px, transparent 0.7px), radial-gradient(circle at 8% 0, #ffffffa6, transparent 38%), radial-gradient(circle at 100% 100%, #7a4b350e, transparent 42%);
+    background-size: 22px 22px, 100% 100%, 100% 100%;
+    background-attachment: fixed;
   }
 
   body::before {
     content: "";
     position: fixed;
     inset: 0;
-    background-image: radial-gradient(var(--color-app-text) 0.5px, transparent 0.5px);
-    background-size: 32px 32px;
-    opacity: 0.02;
+    background-image: radial-gradient(var(--color-app-text) 0.45px, transparent 0.55px);
+    background-size: 11px 11px;
+    opacity: 0.035;
+    mix-blend-mode: multiply;
     pointer-events: none;
     z-index: -1;
   }
 
   h1, h2, h3, h4 {
     @apply font-display;
-    letter-spacing: -0.02em;
-    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+  }
+
+  h1 {
+    letter-spacing: -0.035em;
   }
 }
 
@@ -141,9 +209,6 @@ html, body {
    7. Utility classes
    ───────────────────────────────────────────────────────────────────────── */
 @layer utilities {
-  .font-galinoy { font-family: var(--font-galinoy); }
-  .font-outfit  { font-family: var(--font-outfit);  }
-
   /* Safe-area padding helpers */
   .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
   .pt-safe { padding-top:    env(safe-area-inset-top,    0px); }

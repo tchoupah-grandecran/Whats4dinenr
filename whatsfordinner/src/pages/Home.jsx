@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { createElement, useState } from "react";
 import { auth, db } from "../lib/firebase";
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
@@ -69,12 +69,18 @@ export default function Home({ userData, household }) {
   };
 
   const cycleState = getCycleState();
+  const homeSteps = [
+    { step: 1, eyebrow: "01", label: "Composer le menu", icon: Sparkles },
+    { step: 2, eyebrow: "02", label: "Ajuster les recettes", icon: PenLine },
+    { step: 3, eyebrow: "03", label: "Faire les courses", icon: ShoppingBag },
+    { step: 4, eyebrow: "04", label: "Cuisiner", icon: Utensils },
+  ];
 
   if (!userData) return <div className="p-6"><SkeletonLoader type="home" /></div>;
 
   return (
-    <div className="flex flex-col min-h-[70vh] justify-center px-4 animate-fade-in">
-      <main className="max-w-sm mx-auto w-full">
+    <div className="min-h-[calc(100vh-6rem)] px-6 pb-32 pt-10 text-app-text animate-fade-in md:px-12 lg:px-16">
+      <main className="mx-auto w-full max-w-6xl">
         {!userData?.householdId ? (
           /* ÉCRAN SANS FOYER */
           <div className="glass-card bg-white dark:bg-[var(--color-card-bg)] text-center py-10 px-6">
@@ -110,21 +116,96 @@ export default function Home({ userData, household }) {
         ) : (
           /* ÉCRAN CYCLE */
           cycleState ? (
-            <div className="glass-card bg-white dark:bg-[var(--color-card-bg)] flex flex-col items-center pt-10 px-8 pb-8 text-center relative shadow-2xl">
-              <div className="absolute top-0 left-0 right-0 flex justify-between px-8 pt-5">
-                {[1, 2, 3, 4].map((s) => (
-                  <div key={s} className={`h-1.5 flex-1 mx-0.5 rounded-full ${cycleState.step >= s ? 'bg-[var(--color-accent-ocre)]' : 'bg-[var(--color-accent-ocre)]/10'}`} />
-                ))}
-              </div>
-              <div className={`w-16 h-16 rounded-[1.5rem] ${cycleState.bg} ${cycleState.color} flex items-center justify-center mb-5 mt-2`}>
-                <cycleState.icon size={28} />
-              </div>
-              {/* h2 aligné sur le même poids visuel que Menu.jsx h1 */}
-              <h2 className="font-display text-xl text-[var(--color-app-text)] mb-2">{cycleState.title}</h2>
-              <p className="font-body text-[var(--color-app-text)]/50 text-sm mb-8 leading-relaxed">{cycleState.desc}</p>
-              <button onClick={cycleState.action} className="btn-primary w-full py-4 flex justify-center items-center gap-3">
-                {cycleState.btnText} <ArrowRight size={16} />
-              </button>
+            <div className="mx-auto w-full max-w-6xl">
+              <header className="mb-2">
+                <div className="flex items-end justify-between gap-6">
+                  <h1 className="mt-3 font-display text-[clamp(3.5rem,9vw,6.5rem)] leading-[0.82] tracking-[-0.055em]">
+                    Cette semaine
+                  </h1>
+                  {household?.name && (
+                    <span className="hidden pb-1 text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-app-text)]/25 md:block">
+                      {household.name}
+                    </span>
+                  )}
+                </div>
+                {household?.name && (
+                  <p className="mt-4 text-[8px] font-black uppercase tracking-[0.2em] text-[var(--color-app-text)]/25 md:hidden">
+                    {household.name}
+                  </p>
+                )}
+              </header>
+
+              <section className="relative mt-12 hidden md:block lg:mt-20">
+                <div className="absolute left-0 right-0 top-0 h-px bg-[var(--color-app-text)]/15" />
+                <div className="grid grid-cols-4">
+                  {homeSteps.map(({ step, eyebrow, label, icon: StepIcon }) => {
+                    const active = cycleState.step === step;
+                    const completed = cycleState.step > step;
+                    return (
+                      <div key={step} className={`relative px-4 pt-8 text-center transition-all ${active ? "home-active" : "home-step"}`}>
+                        <span className={`absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full ${active ? "bg-[var(--color-accent-ocre)] ring-8 ring-[var(--color-accent-ocre)]/10" : completed ? "bg-[var(--color-accent-ocre)]/45" : "bg-[var(--color-app-text)]/15"}`} />
+                        {createElement(StepIcon, { className: `mx-auto mb-4 ${active ? "text-[var(--color-accent-ocre)]" : "text-[var(--color-app-text)]/30"}`, size: 20, strokeWidth: 1.7 })}
+                        <span className={`block text-[9px] font-bold tracking-[0.18em] ${active ? "text-[var(--color-accent-ocre)]" : "text-[var(--color-app-text)]/35"}`}>
+                          {active ? `ÉTAPE ${eyebrow}` : eyebrow}
+                        </span>
+                        <p className={`mt-3 text-sm font-bold ${active ? "text-[var(--color-app-text)]" : "text-[var(--color-app-text)]/60"}`}>
+                          {label}
+                        </p>
+                        {active && (
+                          <div className="mx-auto mt-8 max-w-sm home-active-content">
+                            <h2 className="font-display text-[clamp(2.3rem,4vw,4rem)] leading-[0.9] tracking-[-0.04em]">
+                              {cycleState.title.replace(/!$/, ".")}
+                            </h2>
+                            <p className="mt-5 text-sm leading-relaxed text-[var(--color-app-text)]/45">
+                              {cycleState.desc}
+                            </p>
+                            <button onClick={cycleState.action} className="btn-primary mx-auto mt-8 min-w-56">
+                              {cycleState.btnText} <ArrowRight size={17} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="relative mt-10 md:hidden">
+                <div className="absolute bottom-3 left-[7px] top-0 w-px bg-[var(--color-app-text)]/10" />
+                <div className="flex flex-col gap-8">
+                  {homeSteps.map(({ step, eyebrow, label, icon: StepIcon }) => {
+                    const active = cycleState.step === step;
+                    const completed = cycleState.step > step;
+                    return (
+                      <div key={step} className="relative pl-8">
+                        <span className={`absolute left-0 top-1 h-[15px] w-[15px] rounded-full border-2 ${active ? "border-[var(--color-accent-ocre)] bg-[var(--color-app-bg)] shadow-[0_0_0_5px_var(--color-app-bg)]" : completed ? "border-[var(--color-accent-ocre)] bg-[var(--color-accent-ocre)]" : "border-[var(--color-app-text)]/20 bg-[var(--color-app-bg)]"}`} />
+                        <div className="flex items-center gap-3">
+                          {createElement(StepIcon, { className: active ? "text-[var(--color-accent-ocre)]" : "text-[var(--color-app-text)]/35", size: 17, strokeWidth: 1.7 })}
+                          <span className={`text-[9px] font-bold tracking-[0.18em] ${active ? "text-[var(--color-accent-ocre)]" : "text-[var(--color-app-text)]/35"}`}>
+                            {active ? `ÉTAPE ${eyebrow}` : eyebrow}
+                          </span>
+                          <p className={`text-sm font-bold ${active ? "text-[var(--color-app-text)]" : "text-[var(--color-app-text)]/55"}`}>
+                            {label}
+                          </p>
+                        </div>
+                        {active && (
+                          <div className="mt-6 home-active-content">
+                            <h2 className="font-display text-[clamp(2.5rem,12vw,4rem)] leading-[0.9] tracking-[-0.04em]">
+                              {cycleState.title.replace(/!$/, ".")}
+                            </h2>
+                            <p className="mt-4 text-sm leading-relaxed text-[var(--color-app-text)]/45">
+                              {cycleState.desc}
+                            </p>
+                            <button onClick={cycleState.action} className="btn-primary mt-7 w-full">
+                              {cycleState.btnText} <ArrowRight size={17} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
             </div>
           ) : (
             <SkeletonLoader type="home" />
