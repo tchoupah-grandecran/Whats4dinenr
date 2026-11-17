@@ -400,13 +400,15 @@ export default function Menu() {
               <div className="mb-4">
                 <div className="relative z-10 flex justify-between items-start mb-1">
                   <span className={`text-[8px] font-black uppercase tracking-[0.16em] ${darkCard ? 'text-white/50' : 'text-[var(--color-accent-ocre)]'}`}>
-                    {recipe.protein}
+                    {recipe.protein || "Cuisine"}
                   </span>
+                  <span className={`flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest ${darkCard ? 'text-white/50' : 'text-[var(--color-app-text)]/30'}`}><Clock3 size={11} />{recipe.time ? `${recipe.time} min` : "--"}</span>
                 </div>
                 <h3 className={`relative z-10 mt-5 font-body font-semibold leading-[1.02] tracking-[-0.03em] ${featured ? 'text-2xl md:mt-10 md:text-4xl' : compact ? 'text-base md:mt-6 md:text-lg' : 'text-lg md:mt-7 md:text-xl'} ${darkCard ? 'text-white' : 'text-[var(--color-app-text)]'}`}>{recipe.name}</h3>
                 <div className="relative z-10 mt-3 flex flex-wrap gap-1.5">
+                  {Number.parseInt(recipe.time, 10) <= 25 && <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-wider ${darkCard ? 'bg-white/10 text-white/65' : 'bg-[var(--color-accent-ocre)]/10 text-[var(--color-accent-ocre)]'}`}><Zap size={9} fill="currentColor" />Express</span>}
+                  {recipe.isLowCal && <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-wider ${darkCard ? 'bg-white/10 text-white/55' : 'bg-[var(--color-app-text)]/5 text-[var(--color-app-text)]/45'}`}>Léger</span>}
                   {(recipe.tags || []).slice(0, featured ? 3 : 2).map(tag => <span key={tag} className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-wider ${darkCard ? 'bg-white/[0.08] text-white/45' : 'bg-[var(--color-app-text)]/[0.04] text-[var(--color-app-text)]/40'}`}>{tag}</span>)}
-                  {recipe.ingredients?.length > 0 && <span className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-wider ${darkCard ? 'bg-white/[0.08] text-white/45' : 'bg-[var(--color-app-text)]/[0.04] text-[var(--color-app-text)]/40'}`}>{recipe.ingredients.length} ingrédients</span>}
                 </div>
 
                 {details.status && (
@@ -448,12 +450,8 @@ export default function Menu() {
                 )}
               </div>
 
-              <div className={`relative z-10 mt-auto flex items-center justify-between gap-2 border-t pt-4 ${darkCard ? 'border-white/10' : 'border-[var(--color-card-border)]'}`}>
-                <div className="flex items-center gap-4 text-[10px] font-bold opacity-70">
-                  <span className="flex items-center gap-1.5"><Clock3 size={13} className={darkCard ? 'text-white/45' : 'text-[var(--color-accent-ocre)]'} />{recipe.time ? `${recipe.time} min` : '--'}</span>
-                  {recipe.servings && <span className="flex items-center gap-1.5"><Users size={13} className="opacity-50" />{recipe.servings} pers.</span>}
-                </div>
-                <div className="flex items-center gap-2">
+              <div className={`relative z-10 mt-auto flex w-full items-center justify-end gap-2 border-t pt-4 ${darkCard ? 'border-white/10' : 'border-[var(--color-card-border)]'}`}>
+                <div className="flex w-full items-center gap-2">
                 {!isValidated ? (
                   <>
                     <button

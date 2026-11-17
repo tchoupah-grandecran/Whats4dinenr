@@ -3,8 +3,7 @@ import { auth, db } from "../lib/firebase";
 import { collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from "firebase/firestore";
 import {
   Search, Clock3, ChefHat, Heart, Users,
-  ArrowUpDown, Zap, Leaf, Fish, Drumstick, Beef, X, ExternalLink,
-  CalendarPlus, Check
+  ArrowUpDown, Zap, Leaf, Fish, Drumstick, Beef, X, ExternalLink
 } from "lucide-react";
 import SkeletonLoader from "../components/SkeletonLoader";
 
@@ -15,12 +14,6 @@ export default function Recipes({ userData }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeProtein, setActiveProtein] = useState("all");
   const [sortOrder, setSortOrder] = useState("asc");
-
-  const [householdId, setHouseholdId] = useState(null);
-  const [currentMenu, setCurrentMenu] = useState([]);
-  const [isMenuValidated, setIsMenuValidated] = useState(false);
-  const [addingToMenu, setAddingToMenu] = useState(null);
-  const [justAdded, setJustAdded] = useState(null);
 
   const userId = userData?.uid || auth.currentUser?.uid;
 
@@ -40,46 +33,10 @@ export default function Recipes({ userData }) {
     const unsubFavs = onSnapshot(uRef, (snap) => {
       if (snap.exists()) {
         setFavorites(snap.data().favoriteRecipes || []);
-        const hId = snap.data().householdId;
-        if (hId) setHouseholdId(hId);
       }
     });
     return () => unsubFavs();
   }, [userId]);
-
-  useEffect(() => {
-    if (!householdId) return;
-    const unsubHousehold = onSnapshot(doc(db, "households", householdId), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setCurrentMenu(data.currentMenu || []);
-        setIsMenuValidated(data.isMenuValidated || false);
-      }
-    });
-    return () => unsubHousehold();
-  }, [householdId]);
-
-  const menuRecipeIds = useMemo(() => new Set(currentMenu.map(r => r.id)), [currentMenu]);
-  const canAddToMenu = !isMenuValidated;
-
-  const handleAddToMenu = async (e, recipe) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!householdId || !canAddToMenu || addingToMenu) return;
-    setAddingToMenu(recipe.id);
-    try {
-      await updateDoc(doc(db, "households", householdId), {
-        currentMenu: [...currentMenu, recipe],
-        isMenuValidated: false,
-      });
-      setJustAdded(recipe.id);
-      setTimeout(() => setJustAdded(null), 2000);
-    } catch (err) {
-      console.error("Erreur ajout menu:", err);
-    } finally {
-      setAddingToMenu(null);
-    }
-  };
 
   const toggleFavorite = async (recipeId) => {
     if (!userId) return;
@@ -184,8 +141,6 @@ export default function Recipes({ userData }) {
       {/* GRID DES RECETTES */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 auto-rows-[minmax(190px,auto)] md:auto-rows-[minmax(250px,auto)]">
         {filteredAndSorted.map((recipe, index) => {
-          const isInMenu = menuRecipeIds.has(recipe.id);
-          const wasJustAdded = justAdded === recipe.id;
           const editorialPosition = index % 4;
           const featured = editorialPosition === 0;
           const dark = editorialPosition === 1;
@@ -230,49 +185,16 @@ export default function Recipes({ userData }) {
                     <Leaf size={9} /> Léger
                   </span>
                 )}
-                {(recipe.tags || []).filter(tag => !["végé", "vegetarien", "végétarien"].includes(tag.toLowerCase())).slice(0, featured ? 3 : 2).map(tag => <span key={tag} className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-wider ${dark ? "bg-white/[0.07] text-white/40" : "bg-[var(--color-app-text)]/[0.035] text-[var(--color-app-text)]/40"}`}>{tag}</span>)}
+                {(recipe.tags || []).filter(tag => !["végé", "vegetarien", "végétarien", "vegetarienne", "végétarienne"].includes(tag.trim().toLowerCase())).slice(0, featured ? 3 : 2).map(tag => <span key={tag} className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-wider ${dark ? "bg-white/[0.07] text-white/40" : "bg-[var(--color-app-text)]/[0.035] text-[var(--color-app-text)]/40"}`}>{tag}</span>)}
               </div>
 
               <div className={`relative z-10 mt-auto flex items-end justify-between gap-3 border-t pt-4 md:pt-5 ${dark ? "border-white/10" : "border-[var(--color-card-border)]"}`}>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1.5"><Clock3 size={13} className={dark ? "text-white/40" : "text-[var(--color-accent-ocre)]"} /><div><div className="text-[7px] font-black uppercase tracking-widest opacity-40">Temps</div><div className="mt-0.5 text-[10px] font-bold opacity-75">{Number.isFinite(recipeTime) ? `${recipeTime} min` : "--"}</div></div></div>
                   {recipe.servings && <div className="flex items-center gap-1.5"><Users size={13} className="opacity-40" /><div><div className="text-[7px] font-black uppercase tracking-widest opacity-40">Pour</div><div className="mt-0.5 text-[10px] font-bold opacity-75">{recipe.servings}</div></div></div>}
-                  {recipe.ingredients?.length > 0 && <div className="text-[7px] font-black uppercase tracking-widest opacity-45">{recipe.ingredients.length} ingrédients</div>}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {householdId && (
-                    <button
-                      onClick={(e) => handleAddToMenu(e, recipe)}
-                      disabled={isInMenu || !canAddToMenu || addingToMenu === recipe.id}
-                      title={
-                        isMenuValidated ? "Menu validé — modifications impossibles"
-                        : isInMenu ? "Déjà dans le menu"
-                        : "Ajouter au menu"
-                      }
-                      className={`relative z-20 p-2.5 rounded-xl border transition-all shadow-sm flex items-center justify-center ${
-                        wasJustAdded || isInMenu
-                          ? "bg-green-50 text-green-500 border-green-100 cursor-default"
-                          : !canAddToMenu
-                          ? "bg-gray-50 dark:bg-white/5 text-[var(--color-app-text)]/20 border-[var(--color-card-border)] cursor-not-allowed"
-                          : "bg-gray-50 dark:bg-white/5 text-[var(--color-accent-ocre)] border-[var(--color-card-border)] hover:bg-[var(--color-accent-ocre)] hover:text-white"
-                      }`}
-                    >
-                      {wasJustAdded || isInMenu ? <Check size={16} /> : <CalendarPlus size={16} />}
-                    </button>
-                  )}
-
-                  {recipe.pdfLink && (
-                    <a
-                      href={recipe.pdfLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`relative z-20 p-2.5 rounded-xl border transition-all shadow-sm ${dark ? "bg-white text-[var(--color-accent-ocre-deep)]" : "bg-[var(--color-app-text)] text-[var(--color-app-bg)] hover:bg-[var(--color-accent-ocre)]"}`}
-                    >
-                      <ExternalLink size={16}/>
-                    </a>
-                  )}
-                </div>
+                {recipe.pdfLink && <a href={recipe.pdfLink} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} aria-label={`Ouvrir la recette ${recipe.name}`} className={`relative z-20 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-300 group-hover:translate-x-1 ${dark ? "bg-white text-[var(--color-accent-ocre-deep)] hover:bg-white/90" : "bg-[var(--color-app-text)] text-[var(--color-app-bg)] hover:bg-[var(--color-accent-ocre)] hover:text-white"}`}><ExternalLink size={15} /></a>}
               </div>
             </article>
           );
