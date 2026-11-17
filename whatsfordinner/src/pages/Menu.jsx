@@ -380,30 +380,31 @@ export default function Menu() {
       </AnimatePresence>
 
       {/* ── GRILLE RECETTES ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 auto-rows-[minmax(220px,auto)] gap-4">
         {menu.map((recipe, index) => {
           const details = getRecipeDetails(recipe);
           const isPopoverOpen = missingPopoverIndex === index;
+          const featured = index % 5 === 0;
+          const darkCard = index % 5 === 3;
 
           return (
             <MotionDiv
               layout
               key={recipe.id || index}
-              className={`relative bg-white dark:bg-[var(--color-card-bg)] border rounded-2xl p-5 flex flex-col shadow-sm transition-all ${
-                recipe.cooked ? 'opacity-40 grayscale scale-[0.98]' : 'border-[var(--color-card-border)]'
-              }`}
+              className={`group relative flex min-h-full flex-col overflow-hidden rounded-[1.15rem] border p-5 shadow-[0_8px_25px_rgba(0,0,0,0.04)] transition-all duration-500 hover:-translate-y-1 md:p-6 ${featured ? 'md:col-span-2' : ''} ${darkCard ? 'border-transparent bg-[var(--color-accent-ocre-deep)] text-[var(--color-cream)]' : 'border-[var(--color-card-border)] bg-[var(--color-card-bg)]/75 text-[var(--color-app-text)]'} ${recipe.cooked ? 'opacity-40 grayscale scale-[0.98]' : ''}`}
             >
+              <span className={`pointer-events-none absolute bottom-1 right-3 select-none font-display text-6xl leading-none ${darkCard ? 'text-white/[0.05]' : 'text-[var(--color-app-text)]/[0.035]'}`}>{String(index + 1).padStart(2, '0')}</span>
               <div className="mb-4">
-                <div className="flex justify-between items-start mb-1">
-                  <span className="text-[10px] font-black text-[var(--color-accent-ocre)] uppercase tracking-widest">
+                <div className="relative z-10 flex justify-between items-start mb-1">
+                  <span className={`text-[8px] font-black uppercase tracking-[0.16em] ${darkCard ? 'text-white/50' : 'text-[var(--color-accent-ocre)]'}`}>
                     {recipe.protein}
                   </span>
-                  <span className="flex items-center gap-1 text-[10px] font-bold text-[var(--color-app-text)]/30 uppercase tracking-widest">
-                    <Clock3 size={11} /> {recipe.time || "--"}
-                  </span>
                 </div>
-                {/* h3 géré par CSS global (~16–20px) */}
-                <h3 className="mt-1 leading-snug">{recipe.name}</h3>
+                <h3 className={`relative z-10 mt-5 font-body font-semibold leading-[1.02] tracking-[-0.03em] ${featured ? 'text-2xl md:mt-10 md:text-4xl' : 'text-lg md:mt-7 md:text-xl'} ${darkCard ? 'text-white' : 'text-[var(--color-app-text)]'}`}>{recipe.name}</h3>
+                <div className="relative z-10 mt-3 flex flex-wrap gap-1.5">
+                  {(recipe.tags || []).slice(0, featured ? 3 : 2).map(tag => <span key={tag} className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-wider ${darkCard ? 'bg-white/[0.08] text-white/45' : 'bg-[var(--color-app-text)]/[0.04] text-[var(--color-app-text)]/40'}`}>{tag}</span>)}
+                  {recipe.ingredients?.length > 0 && <span className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-wider ${darkCard ? 'bg-white/[0.08] text-white/45' : 'bg-[var(--color-app-text)]/[0.04] text-[var(--color-app-text)]/40'}`}>{recipe.ingredients.length} ingrédients</span>}
+                </div>
 
                 {details.status && (
                   <div className="relative mt-2.5">
@@ -444,7 +445,12 @@ export default function Menu() {
                 )}
               </div>
 
-              <div className="mt-auto flex items-center gap-2">
+              <div className={`relative z-10 mt-auto flex items-center justify-between gap-2 border-t pt-4 ${darkCard ? 'border-white/10' : 'border-[var(--color-card-border)]'}`}>
+                <div className="flex items-center gap-4 text-[10px] font-bold opacity-70">
+                  <span className="flex items-center gap-1.5"><Clock3 size={13} className={darkCard ? 'text-white/45' : 'text-[var(--color-accent-ocre)]'} />{recipe.time ? `${recipe.time} min` : '--'}</span>
+                  {recipe.servings && <span className="flex items-center gap-1.5"><Users size={13} className="opacity-50" />{recipe.servings} pers.</span>}
+                </div>
+                <div className="flex items-center gap-2">
                 {!isValidated ? (
                   <>
                     <button
@@ -493,6 +499,7 @@ export default function Menu() {
                     </button>
                   </>
                 )}
+                </div>
               </div>
             </MotionDiv>
           );

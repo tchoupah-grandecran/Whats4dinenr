@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { auth, db } from "../lib/firebase";
 import { collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from "firebase/firestore";
 import {
-  Search, Clock3, ChefHat, Heart,
+  Search, Clock3, ChefHat, Heart, Users,
   ArrowUpDown, Zap, Leaf, Fish, Drumstick, Beef, X, ExternalLink,
   CalendarPlus, Check
 } from "lucide-react";
@@ -182,54 +182,60 @@ export default function Recipes({ userData }) {
       </div>
 
       {/* GRID DES RECETTES */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-        {filteredAndSorted.map(recipe => {
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 auto-rows-[minmax(190px,auto)] md:auto-rows-[minmax(250px,auto)]">
+        {filteredAndSorted.map((recipe, index) => {
           const isInMenu = menuRecipeIds.has(recipe.id);
           const wasJustAdded = justAdded === recipe.id;
+          const featured = index % 7 === 0;
+          const dark = index % 7 === 3;
+          const recipeTime = Number.parseInt(recipe.time, 10);
 
           return (
-            <div
+            <article
               key={recipe.id}
-              className="bg-white dark:bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-2xl p-5 flex flex-col shadow-sm transition-all hover:shadow-xl hover:-translate-y-1"
+              className={`group relative flex min-h-full flex-col overflow-hidden rounded-[1.15rem] border p-4 transition-all duration-500 hover:-translate-y-1 md:p-6 ${featured ? "md:col-span-2" : ""} ${dark ? "border-transparent bg-[var(--color-accent-ocre-deep)] text-[var(--color-cream)]" : "border-[var(--color-card-border)] bg-[var(--color-card-bg)]/70 text-[var(--color-app-text)]"} shadow-[0_8px_25px_rgba(0,0,0,0.03)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)]`}
             >
-              <div className="flex justify-between items-start mb-3">
-                <span className="text-[10px] font-black text-[var(--color-accent-ocre)] uppercase tracking-widest">
-                  {recipe.protein}
-                </span>
+              <span className={`pointer-events-none absolute bottom-1 right-3 select-none font-display text-5xl leading-none md:text-7xl ${dark ? "text-white/[0.04]" : "text-[var(--color-app-text)]/[0.03]"}`}>{String(index + 1).padStart(2, "0")}</span>
+              <div className="relative z-10 flex justify-between items-start gap-3">
+                <div className={`flex items-center gap-2 text-[8px] font-black uppercase tracking-[0.16em] ${dark ? "text-white/50" : "text-[var(--color-accent-ocre)]"}`}>
+                  <span>{recipe.protein || "Cuisine"}</span>{featured && <><span className="h-1 w-1 rounded-full bg-current/40" /><span className="opacity-60">À la une</span></>}
+                </div>
                 <button
                   onClick={() => toggleFavorite(recipe.id)}
-                  className="p-1 active:scale-125 transition-transform"
+                  aria-label={favorites.includes(recipe.id) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                  className={`relative z-20 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all hover:scale-110 ${dark ? "bg-white/10 text-white/60 hover:text-white" : "bg-[var(--color-app-text)]/5 text-[var(--color-app-text)]/25 hover:text-[var(--color-accent-ocre)]"}`}
                 >
                   <Heart
-                    size={20}
-                    className={`transition-all duration-300 ${favorites.includes(recipe.id) ? "text-red-500 fill-current" : "text-[var(--color-app-text)]/10"}`}
-                    strokeWidth={2.5}
+                    size={16}
+                    fill={favorites.includes(recipe.id) ? "currentColor" : "none"}
                   />
                 </button>
               </div>
 
-              {/* h3 géré par CSS global (~16–20px) */}
-              <h3 className="leading-snug text-[var(--color-app-text)] mb-4">
+              <h3 className={`relative z-10 mt-6 max-w-[520px] font-body font-semibold leading-none tracking-[-0.03em] ${featured ? "text-2xl md:mt-12 md:text-4xl" : "text-lg md:mt-8 md:text-xl"} ${dark ? "text-white" : "text-[var(--color-app-text)]"}`}>
                 {recipe.name}
               </h3>
 
-              <div className="flex flex-wrap gap-1.5 mb-5">
-                {parseInt(recipe.time) <= 25 && (
-                  <span className="badge-recipe !text-amber-500 bg-amber-500/10">
-                    <Zap size={9} fill="currentColor" /> Rapide
+              <div className="relative z-10 mt-4 flex flex-wrap gap-1.5">
+                {Number.isFinite(recipeTime) && recipeTime <= 25 && (
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-wider ${dark ? "bg-white/10 text-white/70" : "bg-[var(--color-accent-ocre)]/10 text-[var(--color-accent-ocre)]"}`}>
+                    <Zap size={9} fill="currentColor" /> Express
                   </span>
                 )}
                 {recipe.isLowCal && (
-                  <span className="badge-recipe !text-green-500 bg-green-500/10">
-                    <Leaf size={9} fill="currentColor" /> Healthy
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-wider ${dark ? "bg-white/10 text-white/60" : "bg-[var(--color-app-text)]/5 text-[var(--color-app-text)]/50"}`}>
+                    <Leaf size={9} /> Léger
                   </span>
                 )}
+                {(recipe.tags || []).filter(tag => !["végé", "vegetarien", "végétarien"].includes(tag.toLowerCase())).slice(0, featured ? 3 : 2).map(tag => <span key={tag} className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-wider ${dark ? "bg-white/[0.07] text-white/40" : "bg-[var(--color-app-text)]/[0.035] text-[var(--color-app-text)]/40"}`}>{tag}</span>)}
               </div>
 
-              <div className="mt-auto flex items-center justify-between pt-4 border-t border-[var(--color-card-border)]">
-                <span className="text-[11px] font-bold flex items-center gap-1.5 uppercase text-[var(--color-app-text)]/30 tracking-widest">
-                  <Clock3 size={12} /> {recipe.time ? `${recipe.time}` : "--"}
-                </span>
+              <div className={`relative z-10 mt-auto flex items-end justify-between gap-3 border-t pt-4 md:pt-5 ${dark ? "border-white/10" : "border-[var(--color-card-border)]"}`}>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1.5"><Clock3 size={13} className={dark ? "text-white/40" : "text-[var(--color-accent-ocre)]"} /><div><div className="text-[7px] font-black uppercase tracking-widest opacity-40">Temps</div><div className="mt-0.5 text-[10px] font-bold opacity-75">{Number.isFinite(recipeTime) ? `${recipeTime} min` : "--"}</div></div></div>
+                  {recipe.servings && <div className="flex items-center gap-1.5"><Users size={13} className="opacity-40" /><div><div className="text-[7px] font-black uppercase tracking-widest opacity-40">Pour</div><div className="mt-0.5 text-[10px] font-bold opacity-75">{recipe.servings}</div></div></div>}
+                  {recipe.ingredients?.length > 0 && <div className="text-[7px] font-black uppercase tracking-widest opacity-45">{recipe.ingredients.length} ingrédients</div>}
+                </div>
 
                 <div className="flex items-center gap-2">
                   {householdId && (
@@ -241,7 +247,7 @@ export default function Recipes({ userData }) {
                         : isInMenu ? "Déjà dans le menu"
                         : "Ajouter au menu"
                       }
-                      className={`p-2.5 rounded-xl border transition-all shadow-sm flex items-center justify-center ${
+                      className={`relative z-20 p-2.5 rounded-xl border transition-all shadow-sm flex items-center justify-center ${
                         wasJustAdded || isInMenu
                           ? "bg-green-50 text-green-500 border-green-100 cursor-default"
                           : !canAddToMenu
@@ -258,14 +264,14 @@ export default function Recipes({ userData }) {
                       href={recipe.pdfLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="p-2.5 rounded-xl bg-gray-50 dark:bg-white/5 text-[var(--color-accent-ocre)] border border-[var(--color-card-border)] hover:bg-[var(--color-accent-ocre)] hover:text-white transition-all shadow-sm"
+                      className={`relative z-20 p-2.5 rounded-xl border transition-all shadow-sm ${dark ? "bg-white text-[var(--color-accent-ocre-deep)]" : "bg-[var(--color-app-text)] text-[var(--color-app-bg)] hover:bg-[var(--color-accent-ocre)]"}`}
                     >
                       <ExternalLink size={16}/>
                     </a>
                   )}
                 </div>
               </div>
-            </div>
+            </article>
           );
         })}
       </div>

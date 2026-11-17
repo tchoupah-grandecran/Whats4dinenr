@@ -12,16 +12,17 @@ export default function BottomNav() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 w-full z-[100] px-6 pb-8 pointer-events-none">
+    <div className="fixed inset-x-0 bottom-0 z-[100] px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pointer-events-none">
       <nav className="
         pointer-events-auto
-        max-w-md mx-auto
-        bg-card-bg border border-card-border
-        shadow-[0_20px_50px_rgba(0,0,0,0.2)]
-        rounded-[2.5rem]
+        max-w-[390px] mx-auto relative
+        bg-card-bg/85 backdrop-blur-2xl border border-card-border
+        shadow-[0_12px_40px_rgba(0,0,0,0.10)]
+        rounded-[1.7rem]
         flex justify-around items-center
-        h-20 px-4
+        h-[68px] px-2
       ">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-px bg-accent-ocre/20" />
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
