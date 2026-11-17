@@ -1,14 +1,14 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, CalendarDays, ChefHat, ShoppingBag } from "lucide-react";
+import { Home, ListTodo, BookOpen, ShoppingBasket } from "lucide-react";
 
 export default function BottomNav() {
   const location = useLocation();
 
   const navItems = [
     { path: "/", icon: Home, label: "Accueil" },
-    { path: "/menu", icon: CalendarDays, label: "Menu" },
-    { path: "/recipes", icon: ChefHat, label: "Recettes" },
-    { path: "/cart", icon: ShoppingBag, label: "Courses" }
+    { path: "/menu", icon: ListTodo, label: "Menu" },
+    { path: "/recipes", icon: BookOpen, label: "Recettes" },
+    { path: "/cart", icon: ShoppingBasket, label: "Courses" }
   ];
 
   return (
@@ -34,9 +34,9 @@ export default function BottomNav() {
               className="relative flex flex-col items-center justify-center flex-1 h-full"
             >
               {/* Icône : transition rapide uniquement sur l'opacité et le transform */}
-              <div className={`transition-[opacity,transform] duration-200 ${
+              <div className={`flex h-9 w-9 items-center justify-center rounded-full transition-[opacity,transform,background-color] duration-200 ${
                 isActive
-                  ? 'text-accent-ocre scale-110 opacity-100'
+                  ? 'text-accent-ocre bg-accent-ocre/10 scale-110 opacity-100'
                   : 'text-app-text opacity-25'
               }`}>
                 <Icon

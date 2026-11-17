@@ -384,8 +384,10 @@ export default function Menu() {
         {menu.map((recipe, index) => {
           const details = getRecipeDetails(recipe);
           const isPopoverOpen = missingPopoverIndex === index;
-          const featured = index % 5 === 0;
-          const darkCard = index % 5 === 3;
+          const editorialPosition = index % 4;
+          const featured = editorialPosition === 0;
+          const darkCard = editorialPosition === 1;
+          const compact = editorialPosition === 3;
 
           return (
             <MotionDiv
@@ -393,6 +395,7 @@ export default function Menu() {
               key={recipe.id || index}
               className={`group relative flex min-h-full flex-col overflow-hidden rounded-[1.15rem] border p-5 shadow-[0_8px_25px_rgba(0,0,0,0.04)] transition-all duration-500 hover:-translate-y-1 md:p-6 ${featured ? 'md:col-span-2' : ''} ${darkCard ? 'border-transparent bg-[var(--color-accent-ocre-deep)] text-[var(--color-cream)]' : 'border-[var(--color-card-border)] bg-[var(--color-card-bg)]/75 text-[var(--color-app-text)]'} ${recipe.cooked ? 'opacity-40 grayscale scale-[0.98]' : ''}`}
             >
+              {featured && <span className="absolute inset-y-0 left-0 z-10 w-1 bg-[var(--color-accent-ocre)]" />}
               <span className={`pointer-events-none absolute bottom-1 right-3 select-none font-display text-6xl leading-none ${darkCard ? 'text-white/[0.05]' : 'text-[var(--color-app-text)]/[0.035]'}`}>{String(index + 1).padStart(2, '0')}</span>
               <div className="mb-4">
                 <div className="relative z-10 flex justify-between items-start mb-1">
@@ -400,7 +403,7 @@ export default function Menu() {
                     {recipe.protein}
                   </span>
                 </div>
-                <h3 className={`relative z-10 mt-5 font-body font-semibold leading-[1.02] tracking-[-0.03em] ${featured ? 'text-2xl md:mt-10 md:text-4xl' : 'text-lg md:mt-7 md:text-xl'} ${darkCard ? 'text-white' : 'text-[var(--color-app-text)]'}`}>{recipe.name}</h3>
+                <h3 className={`relative z-10 mt-5 font-body font-semibold leading-[1.02] tracking-[-0.03em] ${featured ? 'text-2xl md:mt-10 md:text-4xl' : compact ? 'text-base md:mt-6 md:text-lg' : 'text-lg md:mt-7 md:text-xl'} ${darkCard ? 'text-white' : 'text-[var(--color-app-text)]'}`}>{recipe.name}</h3>
                 <div className="relative z-10 mt-3 flex flex-wrap gap-1.5">
                   {(recipe.tags || []).slice(0, featured ? 3 : 2).map(tag => <span key={tag} className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-wider ${darkCard ? 'bg-white/[0.08] text-white/45' : 'bg-[var(--color-app-text)]/[0.04] text-[var(--color-app-text)]/40'}`}>{tag}</span>)}
                   {recipe.ingredients?.length > 0 && <span className={`rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-wider ${darkCard ? 'bg-white/[0.08] text-white/45' : 'bg-[var(--color-app-text)]/[0.04] text-[var(--color-app-text)]/40'}`}>{recipe.ingredients.length} ingrédients</span>}

@@ -186,8 +186,10 @@ export default function Recipes({ userData }) {
         {filteredAndSorted.map((recipe, index) => {
           const isInMenu = menuRecipeIds.has(recipe.id);
           const wasJustAdded = justAdded === recipe.id;
-          const featured = index % 7 === 0;
-          const dark = index % 7 === 3;
+          const editorialPosition = index % 4;
+          const featured = editorialPosition === 0;
+          const dark = editorialPosition === 1;
+          const compact = editorialPosition === 3;
           const recipeTime = Number.parseInt(recipe.time, 10);
 
           return (
@@ -195,6 +197,7 @@ export default function Recipes({ userData }) {
               key={recipe.id}
               className={`group relative flex min-h-full flex-col overflow-hidden rounded-[1.15rem] border p-4 transition-all duration-500 hover:-translate-y-1 md:p-6 ${featured ? "md:col-span-2" : ""} ${dark ? "border-transparent bg-[var(--color-accent-ocre-deep)] text-[var(--color-cream)]" : "border-[var(--color-card-border)] bg-[var(--color-card-bg)]/70 text-[var(--color-app-text)]"} shadow-[0_8px_25px_rgba(0,0,0,0.03)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)]`}
             >
+              {featured && <span className="absolute inset-y-0 left-0 z-10 w-1 bg-[var(--color-accent-ocre)]" />}
               <span className={`pointer-events-none absolute bottom-1 right-3 select-none font-display text-5xl leading-none md:text-7xl ${dark ? "text-white/[0.04]" : "text-[var(--color-app-text)]/[0.03]"}`}>{String(index + 1).padStart(2, "0")}</span>
               <div className="relative z-10 flex justify-between items-start gap-3">
                 <div className={`flex items-center gap-2 text-[8px] font-black uppercase tracking-[0.16em] ${dark ? "text-white/50" : "text-[var(--color-accent-ocre)]"}`}>
@@ -212,7 +215,7 @@ export default function Recipes({ userData }) {
                 </button>
               </div>
 
-              <h3 className={`relative z-10 mt-6 max-w-[520px] font-body font-semibold leading-none tracking-[-0.03em] ${featured ? "text-2xl md:mt-12 md:text-4xl" : "text-lg md:mt-8 md:text-xl"} ${dark ? "text-white" : "text-[var(--color-app-text)]"}`}>
+              <h3 className={`relative z-10 mt-6 max-w-[520px] font-body font-semibold leading-none tracking-[-0.03em] ${featured ? "text-2xl md:mt-12 md:text-4xl" : compact ? "text-base md:mt-6 md:text-lg" : "text-lg md:mt-8 md:text-xl"} ${dark ? "text-white" : "text-[var(--color-app-text)]"}`}>
                 {recipe.name}
               </h3>
 
