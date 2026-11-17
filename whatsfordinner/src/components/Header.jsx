@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { auth } from "../lib/firebase";
 import ProfileModal from "./ProfileModal";
 
 export default function Header({ userData, household }) {
   const [showProfile, setShowProfile] = useState(false);
+  const [failedPhotoURL, setFailedPhotoURL] = useState(null);
+  const photoURL = auth.currentUser?.photoURL;
 
   return (
     <>
@@ -21,7 +24,17 @@ export default function Header({ userData, household }) {
           aria-label="Ouvrir mon profil"
           className="w-11 h-11 rounded-full bg-app-bg border border-card-border flex items-center justify-center shadow-sm active:scale-95 transition-all text-app-text/60 font-body text-sm font-semibold"
         >
-          {(userData?.firstName?.[0] || "C").toUpperCase()}
+          {photoURL && failedPhotoURL !== photoURL ? (
+            <img
+              src={photoURL}
+              alt=""
+              referrerPolicy="no-referrer"
+              onError={() => setFailedPhotoURL(photoURL)}
+              className="h-full w-full rounded-full object-cover"
+            />
+          ) : (
+            (userData?.firstName?.[0] || "C").toUpperCase()
+          )}
         </button>
       </div>
 
