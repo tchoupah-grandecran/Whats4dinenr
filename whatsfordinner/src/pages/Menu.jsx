@@ -402,7 +402,7 @@ export default function Menu() {
                   <span className={`text-[8px] font-black uppercase tracking-[0.16em] ${darkCard ? 'text-white/50' : 'text-[var(--color-accent-ocre)]'}`}>
                     {recipe.protein || "Cuisine"}
                   </span>
-                  <span className={`flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest ${darkCard ? 'text-white/50' : 'text-[var(--color-app-text)]/30'}`}><Clock3 size={11} />{recipe.time ? `${recipe.time} min` : "--"}</span>
+                  <span className={`flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest ${darkCard ? 'text-white/50' : 'text-[var(--color-app-text)]/30'}`}><Clock3 size={11} />{recipe.time ? `${recipe.time}` : "--"}</span>
                 </div>
                 <h3 className={`relative z-10 mt-5 font-body font-semibold leading-[1.02] tracking-[-0.03em] ${featured ? 'text-2xl md:mt-10 md:text-4xl' : compact ? 'text-base md:mt-6 md:text-lg' : 'text-lg md:mt-7 md:text-xl'} ${darkCard ? 'text-white' : 'text-[var(--color-app-text)]'}`}>{recipe.name}</h3>
                 <div className="relative z-10 mt-3 flex flex-wrap gap-1.5">
