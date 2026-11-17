@@ -63,16 +63,15 @@
   }
 
   .glass-panel {
-    border-bottom: 1px solid var(--color-card-border);
     -webkit-backdrop-filter: blur(18px) saturate(115%);
     backdrop-filter: blur(18px) saturate(115%);
     background: linear-gradient(#fbf8f2e0, #fbf8f2b3);
-    box-shadow: 0 8px 28px #37281e0b, inset 0 -1px #ffffff59;
+    box-shadow: 0 5px 18px #37281e08;
   }
 
   .dark .glass-panel {
     background: linear-gradient(#2b2520eb, #2b2520c7);
-    box-shadow: 0 8px 28px #00000038, inset 0 -1px #ffffff06;
+    box-shadow: 0 5px 18px #00000024;
   }
 
   .btn-primary {

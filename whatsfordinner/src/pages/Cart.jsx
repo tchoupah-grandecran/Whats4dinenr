@@ -32,7 +32,7 @@ function AisleModal({ ingredientName, existingAisles, onConfirm, onDismiss }) {
   const canConfirm = mode === "create" ? newAisle.trim().length > 0 : selected.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-33">
+    <div className="fixed inset-0 z-[200] flex items-end justify-center px-4 pb-33">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/30 backdrop-blur-sm"
@@ -400,7 +400,7 @@ export default function Cart() {
         </div>
       </header>
 
-      <div className="sticky top-[calc(env(safe-area-inset-top)+4.75rem)] z-[80] -mt-px border-b border-[var(--color-card-border)] bg-[var(--color-app-bg)]/90 px-6 py-3 backdrop-blur-xl md:px-12 lg:px-16">
+      <div className="sticky top-[calc(env(safe-area-inset-top)+4.25rem)] z-[80] -mt-px border-b border-[var(--color-card-border)] bg-[var(--color-app-bg)]/90 px-6 py-3 backdrop-blur-xl md:px-12 lg:px-16">
         <form onSubmit={handleAddItem} className="relative mx-auto w-full max-w-4xl">
           <input
             type="text"
