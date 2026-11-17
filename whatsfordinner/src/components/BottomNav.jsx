@@ -40,8 +40,8 @@ export default function BottomNav() {
                   : 'text-app-text opacity-25'
               }`}>
                 <Icon
-                  size={24}
-                  strokeWidth={isActive ? 2.5 : 2}
+                  size={18}
+                  strokeWidth={1.8}
                   strokeOpacity={1}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -50,7 +50,7 @@ export default function BottomNav() {
 
               {/* Label : pas de transition compliquée ici */}
               <span className={`
-                text-[9px] font-black uppercase tracking-[0.1em] mt-1.5
+                text-[8px] font-bold tracking-[0.02em] mt-1
                 ${isActive ? 'text-accent-ocre' : 'text-app-text opacity-30'}
               `}>
                 {item.label}

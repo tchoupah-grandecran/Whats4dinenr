@@ -12,14 +12,14 @@ export default function Header({ userData, household }) {
           2. px-6 py-4 : on réduit un peu le padding vertical pour libérer de l'espace
           3. pt-[env(safe-area-inset-top)] : vital pour les iPhone avec encoche
       */}
-      <header className="fixed top-0 left-0 w-full z-[100] glass-panel px-6 py-4 pt-[calc(env(safe-area-inset-top)+1rem)] flex justify-between items-center transition-all duration-300">
+      <div className="fixed top-0 left-0 w-full z-[100] glass-panel px-6 py-4 pt-[calc(env(safe-area-inset-top)+1rem)] flex justify-between items-center transition-all duration-300">
         <div className="flex flex-col">
           <p className="font-body text-app-text/40 text-[9px] uppercase tracking-[0.2em] font-bold mb-0.5">
             {userData?.householdId ? `Foyer • ${household?.name || "..."}` : "Configuration"}
           </p>
-          <h1 className="font-display text-xl text-app-text tracking-tight leading-none">
+          <p className="font-display text-xl text-app-text tracking-tight leading-none">
             Hello, {userData?.firstName || "Chef"}
-          </h1>
+          </p>
         </div>
 
         <button
@@ -28,7 +28,7 @@ export default function Header({ userData, household }) {
         >
           <Settings size={20} strokeWidth={1.8} />
         </button>
-      </header>
+      </div>
 
       <ProfileModal
         isOpen={showProfile}

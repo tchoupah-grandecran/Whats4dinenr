@@ -7,6 +7,12 @@ import {
 } from "lucide-react";
 import SkeletonLoader from "../components/SkeletonLoader";
 
+const normalize = (value = "") => value
+  .toLocaleLowerCase("fr")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .trim();
+
 export default function Recipes({ userData }) {
   const [recipes, setRecipes] = useState([]);
   const [favorites, setFavorites] = useState([]);
@@ -51,27 +57,32 @@ export default function Recipes({ userData }) {
 
   const filteredAndSorted = useMemo(() => {
     let result = recipes.filter(r => {
-      const matchesSearch = r.name.toLowerCase().includes(searchTerm.toLowerCase());
-      if (activeProtein === "fav") return favorites.includes(r.id) && matchesSearch;
-      if (activeProtein === "all") return matchesSearch;
-      return r.protein?.toLowerCase() === activeProtein && matchesSearch;
+      const matchesSearch = normalize(r.name).includes(normalize(searchTerm));
+      const protein = normalize(r.protein);
+      const selectedProtein = normalize(activeProtein);
+      const matchesProtein = ["all", "fav", "express"].includes(activeProtein)
+        || protein === selectedProtein;
+      const matchesFavorite = activeProtein !== "fav" || favorites.includes(r.id);
+      const matchesExpress = activeProtein !== "express" || (Number.parseInt(r.time, 10) <= 25);
+      return matchesSearch && matchesProtein && matchesFavorite && matchesExpress;
     });
 
     return result.sort((a, b) => {
-      const nameA = a.name.toLowerCase();
-      const nameB = b.name.toLowerCase();
+      const nameA = normalize(a.name);
+      const nameB = normalize(b.name);
       if (sortOrder === "asc") return nameA.localeCompare(nameB);
       return nameB.localeCompare(nameA);
     });
   }, [recipes, searchTerm, activeProtein, favorites, sortOrder]);
 
   const proteins = [
-    { id: "all", label: "Tous", icon: ChefHat },
-    { id: "fav", label: "Favoris", icon: Heart },
-    { id: "poulet", label: "Poulet", icon: Drumstick },
-    { id: "bœuf", label: "Bœuf", icon: Beef },
-    { id: "poisson", label: "Poisson", icon: Fish },
-    { id: "végétarien", label: "Végé", icon: Leaf }
+    { id: "all", label: "Toutes", detail: "Toute la bibliothèque", icon: ChefHat },
+    { id: "fav", label: "Favoris", detail: "Tes recettes fétiches", icon: Heart },
+    { id: "express", label: "Express", detail: "25 min ou moins", icon: Zap },
+    { id: "poulet", label: "Poulet", detail: "Volaille", icon: Drumstick },
+    { id: "bœuf", label: "Bœuf", detail: "Viande rouge", icon: Beef },
+    { id: "poisson", label: "Poisson", detail: "Poissons & mer", icon: Fish },
+    { id: "végétarien", label: "Végé", detail: "Sans viande", icon: Leaf }
   ];
 
   if (loading) return <div className="p-6 w-full min-h-screen bg-app-bg"><SkeletonLoader type="header" /></div>;
@@ -80,19 +91,18 @@ export default function Recipes({ userData }) {
     <div className="flex flex-col min-h-screen pt-3 px-4 md:px-8 pb-12 transition-all bg-app-bg w-full">
 
       {/* HEADER */}
-      <header className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
+      <section aria-labelledby="recipes-title" className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-5 pt-2">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="px-2.5 py-0.5 rounded-full bg-[var(--color-accent-ocre)]/10 text-[var(--color-accent-ocre)] text-[10px] font-black uppercase tracking-widest">
-              Bibliothèque
+              01 · Bibliothèque
             </span>
           </div>
-          {/* h1 géré par CSS global (clamp 28–40px) */}
-          <h1 className="font-display text-[clamp(5rem,23vw,25rem)] leading-[0.72] tracking-[-0.05em] text-[var(--color-app-text)]">
-            Les Recettes
+          <h1 id="recipes-title" className="font-display text-[clamp(3.5rem,9vw,7rem)] leading-[0.78] tracking-[-0.055em] text-[var(--color-app-text)]">
+            Recettes
           </h1>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-app-text)]/30 mt-1.5">
-            {filteredAndSorted.length} pépites culinaires
+            {filteredAndSorted.length} résultat{filteredAndSorted.length === 1 ? "" : "s"}
           </p>
         </div>
 
@@ -103,7 +113,7 @@ export default function Recipes({ userData }) {
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Une envie ?"
-              className="w-full bg-white dark:bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-xl py-2.5 px-4 pr-10 text-sm text-[var(--color-app-text)] outline-none focus:ring-4 focus:ring-[var(--color-accent-ocre)]/5 transition-all shadow-sm"
+              className="w-full sm:w-56 bg-white dark:bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-xl py-2.5 px-4 pr-10 text-sm text-[var(--color-app-text)] outline-none focus:ring-4 focus:ring-[var(--color-accent-ocre)]/5 transition-all shadow-sm"
             />
             {searchTerm && (
               <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-app-text)]/20 hover:text-[var(--color-app-text)]/60"><X size={16}/></button>
@@ -115,32 +125,51 @@ export default function Recipes({ userData }) {
             className={`w-11 h-11 shrink-0 rounded-xl flex flex-col items-center justify-center transition-all border bg-white dark:bg-[var(--color-card-bg)] border-[var(--color-card-border)] active:scale-95 shadow-sm ${sortOrder === 'desc' ? 'text-[var(--color-accent-ocre)]' : 'text-[var(--color-app-text)]/40'}`}
           >
             <ArrowUpDown size={16} className={sortOrder === "desc" ? "rotate-180 transition-transform" : "transition-transform"} />
-            <span className="text-[7px] font-black mt-0.5 uppercase tracking-tighter">{sortOrder}</span>
+              <span className="text-[7px] font-black mt-0.5 uppercase tracking-tighter">{sortOrder === "asc" ? "A → Z" : "Z → A"}</span>
           </button>
         </div>
-      </header>
+      </section>
 
-      {/* FILTRES GÉLULES */}
-      <div className="flex gap-2 overflow-x-auto pb-6 scrollbar-hide -mx-2 px-2">
+      {/* EXPLORER / FILTRES */}
+      <section aria-label="Filtres des recettes" className="mb-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-[9px] font-black uppercase tracking-[0.22em] text-[var(--color-app-text)]/35">Explorer</h2>
+          {activeProtein !== "all" && <button onClick={() => setActiveProtein("all")} className="text-[9px] font-bold uppercase tracking-widest text-[var(--color-accent-ocre)]">Tout effacer</button>}
+        </div>
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
         {proteins.map(p => (
           <button
             key={p.id}
             onClick={() => setActiveProtein(p.id)}
-            className={`py-2.5 px-5 text-[10px] font-black uppercase tracking-widest rounded-full transition-all flex items-center gap-2 whitespace-nowrap border ${
+            aria-pressed={p.id === activeProtein}
+            className={`min-w-32 rounded-xl border px-3 py-3 text-left transition-all ${
               p.id === activeProtein
-                ? "bg-[var(--color-app-text)] text-white dark:bg-white dark:text-black border-transparent shadow-lg scale-105"
-                : "bg-white dark:bg-[var(--color-card-bg)] text-[var(--color-app-text)]/40 border-[var(--color-card-border)] hover:border-[var(--color-accent-ocre)]/30"
+                ? "border-[var(--color-accent-ocre)]/35 bg-[var(--color-accent-ocre)]/10 text-[var(--color-accent-ocre)] shadow-sm"
+                : "border-[var(--color-card-border)] bg-[var(--color-card-bg)]/60 text-[var(--color-app-text)]/50 hover:border-[var(--color-accent-ocre)]/30"
             }`}
           >
-            <p.icon size={14} fill={(p.id === "fav" && favorites.includes(p.id)) || (p.id === activeProtein && p.id === "fav") ? "currentColor" : "none"} />
-            {p.label}
+            <span className="mb-2 flex items-center justify-between text-[8px] font-black tracking-[0.16em] opacity-50"><span>{String(proteins.indexOf(p) + 1).padStart(2, "0")}</span><p.icon size={13} /></span>
+            <span className="block text-[10px] font-black uppercase tracking-[0.12em]">{p.label}</span>
+            <span className="mt-1 block text-[9px] font-medium opacity-55">{p.detail}</span>
           </button>
         ))}
       </div>
+      </section>
 
       {/* GRID DES RECETTES */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 auto-rows-[minmax(190px,auto)] md:auto-rows-[minmax(250px,auto)]">
-        {filteredAndSorted.map((recipe, index) => {
+        {filteredAndSorted.length === 0 ? (
+          <div className="col-span-full rounded-[1.5rem] border border-[var(--color-card-border)] bg-[var(--color-card-bg)]/55 px-6 py-12 text-center">
+            <p className="font-display text-2xl">Aucune recette trouvée</p>
+            <p className="mt-2 text-sm text-[var(--color-app-text)]/45">Essaie un autre filtre ou une autre recherche.</p>
+            <button
+              onClick={() => { setActiveProtein("all"); setSearchTerm(""); }}
+              className="mt-5 rounded-full bg-[var(--color-accent-ocre)] px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-white"
+            >
+              Réinitialiser
+            </button>
+          </div>
+        ) : filteredAndSorted.map((recipe, index) => {
           const editorialPosition = index % 4;
           const featured = editorialPosition === 0;
           const dark = editorialPosition === 1;

@@ -63,7 +63,7 @@ function AppLayout() {
   }
 
   return (
-    <main className="w-full max-w-[1400px] mx-auto relative min-h-screen pb-24">
+    <div className="w-full max-w-[1400px] mx-auto relative min-h-screen pb-24">
       {authUser && !loginPage && <Header userData={userData} household={household} />}
       <div className={authUser && !loginPage ? "pt-20" : ""}>
         <Routes>
@@ -78,7 +78,7 @@ function AppLayout() {
         </Routes>
       </div>
       {authUser && !loginPage && <BottomNav />}
-    </main>
+    </div>
   );
 }
 

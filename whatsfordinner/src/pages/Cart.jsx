@@ -364,8 +364,8 @@ export default function Cart() {
 
       {/* HEADER */}
       <header className="px-6 md:px-12 lg:px-16 pt-8 md:pt-12">
-        <div className="border-b border-[var(--color-card-border)] pb-8 md:pb-10">
-          <div className="flex flex-col xl:flex-row xl:items-end gap-8">
+        <div className="border-b border-[var(--color-card-border)] pb-5 md:pb-7">
+          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div className="shrink-0">
               <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--color-app-text)]/35">
                 {pendingItems.length} article{pendingItems.length === 1 ? "" : "s"} à acheter
@@ -375,24 +375,7 @@ export default function Cart() {
               </h1>
             </div>
 
-            <div className="flex min-w-0 flex-1 items-center gap-2 xl:pb-1">
-              <form onSubmit={handleAddItem} className="relative min-w-0 flex-1">
-                <input
-                  type="text"
-                  value={newItem}
-                  onChange={e => setNewItem(e.target.value)}
-                  placeholder="Ajouter un article..."
-                  className="h-[52px] w-full rounded-[1rem] border border-[var(--color-card-border)] bg-[var(--color-card-bg)]/65 pl-5 pr-14 text-sm font-medium text-[var(--color-app-text)] outline-none backdrop-blur-xl transition-all placeholder:text-[var(--color-app-text)]/25 focus:border-[var(--color-accent-ocre)]/35 focus:shadow-[0_10px_30px_rgba(0,0,0,0.05)] md:h-[56px]"
-                />
-                <button
-                  type="submit"
-                  aria-label="Ajouter"
-                  className="absolute right-2 top-2 bottom-2 flex w-11 items-center justify-center rounded-[0.8rem] bg-[var(--color-accent-ocre)] text-[var(--color-cream)] transition-all hover:bg-[var(--color-accent-ocre-deep)] active:scale-95 md:w-12"
-                >
-                  <Plus size={20} strokeWidth={2.5} />
-                </button>
-              </form>
-
+            <div className="flex shrink-0 items-center gap-2 pb-1">
               <button
                 type="button"
                 onClick={() => setViewMode(viewMode === "list" ? "recipe" : "list")}
@@ -416,6 +399,26 @@ export default function Cart() {
           </div>
         </div>
       </header>
+
+      <div className="sticky top-[calc(env(safe-area-inset-top)+4.75rem)] z-[80] -mt-px border-b border-[var(--color-card-border)] bg-[var(--color-app-bg)]/90 px-6 py-3 backdrop-blur-xl md:px-12 lg:px-16">
+        <form onSubmit={handleAddItem} className="relative mx-auto w-full max-w-4xl">
+          <input
+            type="text"
+            value={newItem}
+            onChange={e => setNewItem(e.target.value)}
+            placeholder="Ajouter un article..."
+            aria-label="Nouvel article à ajouter au panier"
+            className="h-[48px] w-full rounded-[1rem] border border-[var(--color-card-border)] bg-[var(--color-card-bg)]/75 pl-5 pr-14 text-sm font-medium text-[var(--color-app-text)] outline-none transition-all placeholder:text-[var(--color-app-text)]/35 focus:border-[var(--color-accent-ocre)]/45 focus:shadow-[0_10px_30px_rgba(0,0,0,0.05)] md:h-[52px]"
+          />
+          <button
+            type="submit"
+            aria-label="Ajouter"
+            className="absolute right-1.5 top-1.5 bottom-1.5 flex w-10 items-center justify-center rounded-[0.8rem] bg-[var(--color-accent-ocre)] text-[var(--color-cream)] transition-all hover:bg-[var(--color-accent-ocre-deep)] active:scale-95 md:w-11"
+          >
+            <Plus size={19} strokeWidth={2.5} />
+          </button>
+        </form>
+      </div>
 
       {/* LISTES */}
       <section className="px-6 pt-8 md:px-12 lg:px-16">
