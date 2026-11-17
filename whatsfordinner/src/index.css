@@ -1,66 +1,65 @@
 /* ─────────────────────────────────────────────────────────────────────────
    1. External fonts — must come before everything else
    ───────────────────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Satoshi:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
-/* Tailwind 4 reads utility tokens from @theme. The app also exposes runtime
-   theme variables so the light/dark switch can update the same colors. */
-@theme inline {
-  --font-display: var(--font-outfit);
-  --font-body: var(--font-outfit);
-  --color-app-bg: var(--app-bg);
-  --color-app-text: var(--app-text);
-  --color-card-bg: var(--card-bg);
-  --color-card-border: var(--card-border);
-  --color-accent-ocre: var(--accent-ocre);
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   3. Local fonts
-   ───────────────────────────────────────────────────────────────────────── */
 @font-face {
   font-family: 'Recoleta';
   src: url('/recoletablack.otf') format('opentype');
-  font-weight: normal;
+  font-weight: 700 900;
   font-style: normal;
   font-display: swap;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   4. Global CSS variables
-   ───────────────────────────────────────────────────────────────────────── */
-:root {
-  --font-galinoy: 'Recoleta', serif;
-  --font-outfit:  'Outfit', sans-serif;
+/* Palette et typographies éditoriales du design d'origine. */
+@theme {
+  --font-display: "Recoleta", serif;
+  --font-body: "Satoshi", sans-serif;
+  --font-mono: "Fira Code", monospace;
 
-  --app-bg: #f8f6f1;
-  --app-text: #292720;
-  --card-bg: #fffefa;
-  --card-border: rgba(41, 39, 32, 0.09);
-  --accent-ocre: #b8753e;
-  --theme-bg: var(--app-bg);
-  --theme-text: var(--app-text);
-  --theme-grain-opacity: 0.035;
-
-  /* Fallback avant que AppHeader n'injecte la valeur réelle au runtime */
-  --header-opaque-height: calc(env(safe-area-inset-top, 0px) + 96px);
-  --header-total-height:  calc(env(safe-area-inset-top, 0px) + 128px);
+  --color-app-bg: #FCF9F2;
+  --color-app-text: #060907;
+  --color-card-bg: #FFFFFF;
+  --color-card-border: rgba(6, 9, 7, 0.05);
+  --color-accent-ocre: #D97706;
+  --color-accent-ocre-deep: #B45309;
+  --color-cream: #faf9f5;
 }
 
-:root.dark {
-  color-scheme: dark;
-  --app-bg: #111210;
-  --app-text: #f2efe8;
-  --card-bg: #1b1c19;
-  --card-border: rgba(242, 239, 232, 0.1);
-  --accent-ocre: #d99a62;
-  --theme-bg: var(--app-bg);
-  --theme-text: var(--app-text);
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  .dark {
+    --color-app-bg: #0F110E;
+    --color-app-text: #F3F4F1;
+    --color-card-bg: #181A17;
+    --color-card-border: rgba(243, 244, 241, 0.08);
+    --color-accent-ocre: #F59E0B;
+    --color-accent-ocre-deep: #D97706;
+  }
 }
 
-:root:not(.dark) {
-  color-scheme: light;
+@layer components {
+  .glass-card {
+    @apply bg-card-bg border border-card-border rounded-[2.5rem] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] transition-all duration-500;
+  }
+
+  .glass-panel {
+    @apply bg-card-bg/80 backdrop-blur-xl border-b border-card-border;
+  }
+
+  .btn-primary {
+    @apply flex items-center justify-center gap-3 bg-accent-ocre text-[#FCF9F2] hover:bg-accent-ocre-deep hover:shadow-[0_10px_25px_rgba(217,119,6,0.2)] shadow-md active:scale-[0.98] disabled:opacity-50 rounded-2xl py-4 px-6 text-lg font-display transition-all duration-300 border-none;
+  }
+
+  .btn-secondary {
+    @apply flex items-center justify-center gap-3 bg-app-bg text-app-text border border-card-border shadow-sm hover:bg-card-bg active:scale-[0.97] rounded-full py-4 px-6 text-sm font-bold uppercase tracking-widest transition-all;
+  }
+
+  .badge {
+    @apply font-body text-[10px] font-bold px-3 py-1 rounded-full bg-accent-ocre/10 text-accent-ocre uppercase tracking-[0.15em] border border-accent-ocre/10;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -81,7 +80,7 @@ html, body {
   padding: 0 !important;
   overflow: hidden !important;
   -webkit-tap-highlight-color: transparent;
-  background-color: var(--theme-bg);
+  background-color: var(--color-app-bg);
 }
 
 #root {
@@ -93,7 +92,7 @@ html, body {
      inset: 0 remplacé — bottom négatif = safe-area-inset-bottom pour
      que le fond de #root couvre toute la zone physique de l'écran. */
   bottom: calc(-1 * env(safe-area-inset-bottom, 0px)) !important;
-  background-color: var(--theme-bg);
+  background-color: var(--color-app-bg);
 }
 
 /* Conteneurs directs de #root qui utilisent absolute/fixed + inset-0 :
@@ -110,12 +109,31 @@ html, body {
 @layer base {
   body {
     width: 100%;
-    color: var(--theme-text, white);
-    font-family: var(--font-outfit);
+    @apply font-body bg-app-bg text-app-text relative overflow-x-hidden;
+    color: var(--color-app-text);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
     transition: background-color 0.70s ease;
+    background-image: radial-gradient(var(--color-app-text) 0.5px, transparent 0.5px);
+    background-size: 32px 32px;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(var(--color-app-text) 0.5px, transparent 0.5px);
+    background-size: 32px 32px;
+    opacity: 0.02;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
   }
 }
 
