@@ -2,8 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import { auth, db } from "../lib/firebase";
 import { collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from "firebase/firestore";
 import {
-  Search, Clock3, ChefHat, Heart, Users,
-  ArrowUpDown, Zap, Leaf, Fish, Drumstick, Beef, X, ExternalLink
+  Clock3, ChefHat, Heart, Users,
+  ArrowUpDown, Zap, Leaf, Fish, Drumstick, Beef, X, ExternalLink, SlidersHorizontal
 } from "lucide-react";
 import SkeletonLoader from "../components/SkeletonLoader";
 
@@ -20,6 +20,7 @@ export default function Recipes({ userData }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeProtein, setActiveProtein] = useState("all");
   const [sortOrder, setSortOrder] = useState("asc");
+  const [showFilters, setShowFilters] = useState(false);
 
   const userId = userData?.uid || auth.currentUser?.uid;
 
@@ -91,70 +92,72 @@ export default function Recipes({ userData }) {
     <div className="flex flex-col min-h-screen pt-3 px-4 md:px-8 pb-12 transition-all bg-app-bg w-full">
 
       {/* HEADER */}
-      <section aria-labelledby="recipes-title" className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-5 pt-2">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="px-2.5 py-0.5 rounded-full bg-[var(--color-accent-ocre)]/10 text-[var(--color-accent-ocre)] text-[10px] font-black uppercase tracking-widest">
-              01 · Bibliothèque
-            </span>
-          </div>
-          <h1 id="recipes-title" className="font-display text-[clamp(3.5rem,9vw,7rem)] leading-[0.78] tracking-[-0.055em] text-[var(--color-app-text)]">
-            Recettes
-          </h1>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-app-text)]/30 mt-1.5">
-            {filteredAndSorted.length} résultat{filteredAndSorted.length === 1 ? "" : "s"}
-          </p>
-        </div>
+      <section aria-labelledby="recipes-title" className="mb-5 pt-2">
+        <h1 id="recipes-title" className="mb-5 font-display text-[clamp(3.5rem,9vw,7rem)] leading-[0.78] tracking-[-0.055em] text-[var(--color-app-text)]">
+          Recettes
+        </h1>
 
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex items-center gap-2.5">
+          <div className="relative min-w-0 flex-1">
             <input
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              placeholder="Une envie ?"
-              className="w-full sm:w-56 bg-white dark:bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-xl py-2.5 px-4 pr-10 text-sm text-[var(--color-app-text)] outline-none focus:ring-4 focus:ring-[var(--color-accent-ocre)]/5 transition-all shadow-sm"
+              placeholder="Chercher une recette..."
+              className="h-[46px] w-full rounded-[1.1rem] border border-[var(--color-card-border)] bg-[var(--color-card-bg)]/75 px-5 pr-11 text-sm text-[var(--color-app-text)] shadow-[0_6px_20px_rgba(36,32,28,0.035)] outline-none transition-all placeholder:text-[var(--color-app-text)]/30 focus:border-[var(--color-accent-ocre)]/35 focus:ring-4 focus:ring-[var(--color-accent-ocre)]/5"
             />
             {searchTerm && (
-              <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-app-text)]/20 hover:text-[var(--color-app-text)]/60"><X size={16}/></button>
+              <button type="button" aria-label="Effacer la recherche" onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-app-text)]/35 hover:text-[var(--color-app-text)]/70"><X size={16}/></button>
             )}
           </div>
-
           <button
-            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-            className={`w-11 h-11 shrink-0 rounded-xl flex flex-col items-center justify-center transition-all border bg-white dark:bg-[var(--color-card-bg)] border-[var(--color-card-border)] active:scale-95 shadow-sm ${sortOrder === 'desc' ? 'text-[var(--color-accent-ocre)]' : 'text-[var(--color-app-text)]/40'}`}
+            type="button"
+            onClick={() => setShowFilters(open => !open)}
+            aria-label={showFilters ? "Masquer les filtres" : "Afficher les filtres"}
+            aria-expanded={showFilters}
+            aria-controls="recipe-filter-panel"
+            className={`flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[1.1rem] border transition-all active:scale-95 ${showFilters ? "border-[var(--color-app-text)] bg-[var(--color-app-text)] text-[var(--color-cream)]" : "border-[var(--color-card-border)] bg-[var(--color-card-bg)]/75 text-[var(--color-app-text)]/55 hover:text-[var(--color-app-text)]"}`}
           >
-            <ArrowUpDown size={16} className={sortOrder === "desc" ? "rotate-180 transition-transform" : "transition-transform"} />
-              <span className="text-[7px] font-black mt-0.5 uppercase tracking-tighter">{sortOrder === "asc" ? "A → Z" : "Z → A"}</span>
+            <SlidersHorizontal size={17} strokeWidth={1.8} />
           </button>
         </div>
+
+        {showFilters && (
+          <div id="recipe-filter-panel" className="mt-3 rounded-[1.2rem] border border-[var(--color-card-border)] bg-[var(--color-card-bg)]/80 p-3 shadow-[0_8px_24px_rgba(36,32,28,0.04)]">
+            <div className="grid grid-cols-3 gap-2">
+              {proteins.map(p => {
+                const Icon = p.icon;
+                const selected = activeProtein === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setActiveProtein(p.id)}
+                    aria-pressed={selected}
+                    className={`flex h-[62px] flex-col items-center justify-center gap-1 rounded-[0.9rem] border text-[9px] font-black uppercase tracking-[0.08em] transition-colors ${selected ? "border-[var(--color-app-text)] bg-[var(--color-app-text)] text-[var(--color-cream)]" : "border-[var(--color-card-border)] bg-[var(--color-app-bg)]/55 text-[var(--color-app-text)] hover:border-[var(--color-accent-ocre)]/35"}`}
+                  >
+                    <Icon size={16} strokeWidth={1.8} />
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => setSortOrder(order => order === "asc" ? "desc" : "asc")}
+              className="mt-2 flex h-[42px] w-full items-center justify-center gap-2 rounded-[0.9rem] border border-[var(--color-card-border)] bg-[var(--color-app-bg)]/55 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--color-app-text)]/60 transition-colors hover:text-[var(--color-accent-ocre)]"
+            >
+              <ArrowUpDown size={14} className={sortOrder === "desc" ? "rotate-180 transition-transform" : "transition-transform"} />
+              Tri : {sortOrder === "asc" ? "A → Z" : "Z → A"}
+            </button>
+          </div>
+        )}
       </section>
 
-      {/* EXPLORER / FILTRES */}
-      <section aria-label="Filtres des recettes" className="mb-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[9px] font-black uppercase tracking-[0.22em] text-[var(--color-app-text)]/35">Explorer</h2>
-          {activeProtein !== "all" && <button onClick={() => setActiveProtein("all")} className="text-[9px] font-bold uppercase tracking-widest text-[var(--color-accent-ocre)]">Tout effacer</button>}
-        </div>
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
-        {proteins.map(p => (
-          <button
-            key={p.id}
-            onClick={() => setActiveProtein(p.id)}
-            aria-pressed={p.id === activeProtein}
-            className={`min-w-32 rounded-xl border px-3 py-3 text-left transition-all ${
-              p.id === activeProtein
-                ? "border-[var(--color-accent-ocre)]/35 bg-[var(--color-accent-ocre)]/10 text-[var(--color-accent-ocre)] shadow-sm"
-                : "border-[var(--color-card-border)] bg-[var(--color-card-bg)]/60 text-[var(--color-app-text)]/50 hover:border-[var(--color-accent-ocre)]/30"
-            }`}
-          >
-            <span className="mb-2 flex items-center justify-between text-[8px] font-black tracking-[0.16em] opacity-50"><span>{String(proteins.indexOf(p) + 1).padStart(2, "0")}</span><p.icon size={13} /></span>
-            <span className="block text-[10px] font-black uppercase tracking-[0.12em]">{p.label}</span>
-            <span className="mt-1 block text-[9px] font-medium opacity-55">{p.detail}</span>
-          </button>
-        ))}
+      <div className="mb-4 flex items-center justify-between border-b border-[var(--color-card-border)] pb-3 text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-app-text)]/30">
+        <span>{activeProtein === "all" ? "Toutes les recettes" : `${proteins.find(p => p.id === activeProtein)?.label || "Recettes"} · recettes`}</span>
+        <span>{filteredAndSorted.length} résultat{filteredAndSorted.length === 1 ? "" : "s"}</span>
       </div>
-      </section>
 
       {/* GRID DES RECETTES */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 auto-rows-[minmax(190px,auto)] md:auto-rows-[minmax(250px,auto)]">
