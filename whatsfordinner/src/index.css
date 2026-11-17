@@ -168,28 +168,13 @@
     min-height: 100vh;
     min-height: -webkit-fill-available;
     padding-top: env(safe-area-inset-top);
-    @apply font-body bg-app-bg text-app-text relative overflow-x-hidden;
+    @apply font-body bg-app-bg text-app-text overflow-x-hidden;
     color: var(--color-app-text);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
     transition: background-color 0.7s ease;
     background-color: var(--color-app-bg);
-    background-image: radial-gradient(#24201c0e 0.6px, transparent 0.7px), radial-gradient(circle at 8% 0, #ffffffa6, transparent 38%), radial-gradient(circle at 100% 100%, #7a4b350e, transparent 42%);
-    background-size: 22px 22px, 100% 100%, 100% 100%;
-    background-attachment: fixed;
-  }
-
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    background-image: radial-gradient(var(--color-app-text) 0.45px, transparent 0.55px);
-    background-size: 11px 11px;
-    opacity: 0.035;
-    mix-blend-mode: multiply;
-    pointer-events: none;
-    z-index: -1;
   }
 
   h1, h2, h3, h4 {
