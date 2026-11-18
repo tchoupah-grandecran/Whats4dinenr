@@ -509,7 +509,7 @@ export default function Menu() {
 
       {/* ── CTA FLOTTANT ── */}
       {!isValidated && menu.length > 0 && (
-        <div className="fixed bottom-24 left-0 right-0 px-4 z-[60] flex justify-center pointer-events-none">
+        <div className="fixed bottom-30 left-0 right-0 px-4 z-[60] flex justify-center pointer-events-none">
           <button
             onClick={() => syncMenuAndCart(menu, { redirect: true, markValidated: true })}
             className="btn-primary px-8 h-12 shadow-2xl pointer-events-auto"
